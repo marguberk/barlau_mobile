@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
+import 'package:feather_icons/feather_icons.dart';
 import '../providers/auth_provider.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -30,6 +31,11 @@ class _LoginScreenState extends State<LoginScreen>
   @override
   void initState() {
     super.initState();
+
+    // Предзаполняем номер телефона
+    _phoneController.text = '+7';
+    
+
 
     // Контроллеры анимации
     _logoController = AnimationController(
@@ -121,19 +127,64 @@ class _LoginScreenState extends State<LoginScreen>
       );
 
       if (!success && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Неверный номер телефона или пароль'),
-            backgroundColor: Colors.red,
-          ),
+        // Получаем конкретную ошибку из AuthProvider
+        final errorMessage = authProvider.error ?? 'Неверный логин или пароль';
+        
+        // Показываем более заметное уведомление об ошибке
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              title: const Row(
+                children: [
+                  Icon(Icons.error_outline, color: Colors.red, size: 24),
+                  SizedBox(width: 8),
+                  Text(
+                    'Ошибка входа',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.red,
+                    ),
+                  ),
+                ],
+              ),
+              content: Text(
+                errorMessage,
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: Color(0xFF666D80),
+                ),
+              ),
+              actions: [
+                ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF2679DB),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: const Text(
+                    'Понятно',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
+              ],
+            );
+          },
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Ошибка подключения к серверу'),
+          SnackBar(
+            content: Text('Ошибка подключения к серверу: $e'),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
           ),
         );
       }
@@ -188,7 +239,6 @@ class _LoginScreenState extends State<LoginScreen>
                                 fontSize: 24,
                                 fontWeight: FontWeight.w600,
                                 color: Color(0xFF000000),
-                                fontFamily: 'Inter',
                               ),
                             ),
                           ],
@@ -249,8 +299,7 @@ class _LoginScreenState extends State<LoginScreen>
                                         style: TextStyle(
                                           fontSize: 24,
                                           fontWeight: FontWeight.w600,
-                                          color: Color(0xFF18181B), // text-zinc-950
-                                          fontFamily: 'Inter',
+                                                                                  color: Color(0xFF18181B), // text-zinc-950
                                         ),
                                       ),
                                     ),
@@ -270,7 +319,6 @@ class _LoginScreenState extends State<LoginScreen>
                                         style: TextStyle(
                                           fontSize: 16,
                                           color: Color(0xFF6B7280), // text-gray-500
-                                          fontFamily: 'Inter',
                                         ),
                                       ),
                                     ),
@@ -289,13 +337,12 @@ class _LoginScreenState extends State<LoginScreen>
                                       fontSize: 14,
                                       fontWeight: FontWeight.w500,
                                       color: Color(0xFF6B7280), // text-gray-500
-                                      fontFamily: 'Inter',
                                     ),
                                   ),
                                   const SizedBox(height: 8),
                                   Container(
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFFEFF6FF), // bg-blue-50
+                                      color: Colors.white,
                                       borderRadius: BorderRadius.circular(12),
                                       border: Border.all(
                                         color: const Color(0xFFE5E7EB), // border-gray-200
@@ -307,14 +354,12 @@ class _LoginScreenState extends State<LoginScreen>
                                       keyboardType: TextInputType.phone,
                                       style: const TextStyle(
                                         fontSize: 16,
-                                        fontFamily: 'Inter',
                                         color: Color(0xFF18181B),
                                       ),
                                       decoration: const InputDecoration(
-                                        hintText: 'Введите номер телефона',
+                                        hintText: '+7',
                                         hintStyle: TextStyle(
                                           color: Color(0xFF9CA3AF), // text-gray-400
-                                          fontFamily: 'Inter',
                                         ),
                                         border: InputBorder.none,
                                         contentPadding: EdgeInsets.symmetric(
@@ -338,7 +383,6 @@ class _LoginScreenState extends State<LoginScreen>
                                       fontSize: 14,
                                       fontWeight: FontWeight.w500,
                                       color: Color(0xFF6B7280), // text-gray-500
-                                      fontFamily: 'Inter',
                                     ),
                                   ),
                                   const SizedBox(height: 8),
@@ -356,15 +400,9 @@ class _LoginScreenState extends State<LoginScreen>
                                       obscureText: !_isPasswordVisible,
                                       style: const TextStyle(
                                         fontSize: 16,
-                                        fontFamily: 'Inter',
                                         color: Color(0xFF18181B),
                                       ),
                                       decoration: InputDecoration(
-                                        hintText: 'Введите пароль',
-                                        hintStyle: const TextStyle(
-                                          color: Color(0xFF9CA3AF), // text-gray-400
-                                          fontFamily: 'Inter',
-                                        ),
                                         border: InputBorder.none,
                                         contentPadding: const EdgeInsets.symmetric(
                                           horizontal: 16,
@@ -373,8 +411,8 @@ class _LoginScreenState extends State<LoginScreen>
                                         suffixIcon: IconButton(
                                           icon: Icon(
                                             _isPasswordVisible
-                                                ? Icons.visibility_off
-                                                : Icons.visibility,
+                                                ? FeatherIcons.eyeOff
+                                                : FeatherIcons.eye,
                                             color: const Color(0xFF6B7280),
                                             size: 20,
                                           ),
@@ -420,22 +458,11 @@ class _LoginScreenState extends State<LoginScreen>
                                           style: TextStyle(
                                             fontSize: 16,
                                             fontWeight: FontWeight.w600,
-                                            fontFamily: 'Inter',
                                           ),
                                         ),
                                 ),
                               ),
-                              const SizedBox(height: 16),
 
-                              // Тестовые данные
-                              const Text(
-                                'Тестовые данные: admin / admin',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Color(0xFF9CA3AF), // text-gray-400
-                                  fontFamily: 'Inter',
-                                ),
-                              ),
                             ],
                           ),
                         ),

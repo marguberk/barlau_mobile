@@ -126,7 +126,7 @@ class _TripsScreenState extends State<TripsScreen> with TickerProviderStateMixin
       locale: const Locale('ru', 'RU'),
     );
     if (picked != null) {
-      setState(() {
+    setState(() {
         if (isStartDate) {
           _selectedStartDate = picked;
         } else {
@@ -202,7 +202,7 @@ class _TripsScreenState extends State<TripsScreen> with TickerProviderStateMixin
               leading: const Icon(Icons.clear, color: Color(0xFF6B7280)),
               title: const Text('Все грузовики'),
               onTap: () {
-                setState(() {
+      setState(() {
                   _selectedVehicle = null;
                 });
                 Navigator.pop(context);
@@ -225,7 +225,7 @@ class _TripsScreenState extends State<TripsScreen> with TickerProviderStateMixin
   }
 
   void _clearFilters() {
-    setState(() {
+        setState(() {
       _selectedStartDate = null;
       _selectedEndDate = null;
       _selectedDriver = null;
@@ -293,7 +293,7 @@ class _TripsScreenState extends State<TripsScreen> with TickerProviderStateMixin
       default:
         statusColor = const Color(0xFF6B7280);
     }
-
+    
     return InkWell(
       onTap: () => _showTripDetails(trip),
       borderRadius: BorderRadius.circular(8),
@@ -320,7 +320,7 @@ class _TripsScreenState extends State<TripsScreen> with TickerProviderStateMixin
                 children: [
                   Text(
                     '${vehicle['number']} • ${driver['name']}',
-                    style: const TextStyle(
+                          style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                       color: Color(0xFF1F2937),
@@ -337,10 +337,10 @@ class _TripsScreenState extends State<TripsScreen> with TickerProviderStateMixin
                 ],
               ),
             ),
-            Text(
+                            Text(
               DateFormat('dd.MM').format(DateTime.parse(trip['start_date'])),
               style: const TextStyle(
-                fontSize: 12,
+                                fontSize: 12,
                 color: Color(0xFF6B7280),
               ),
             ),
@@ -357,12 +357,6 @@ class _TripsScreenState extends State<TripsScreen> with TickerProviderStateMixin
       appBar: AppHeader(
         title: 'Заезды',
         isConnected: true,
-        onNotificationTap: () {
-          // Обработка нажатия на уведомления
-        },
-        onProfileTap: () {
-          // Обработка нажатия на профиль
-        },
       ),
       body: Column(
         children: [
@@ -399,11 +393,11 @@ class _TripsScreenState extends State<TripsScreen> with TickerProviderStateMixin
                 _buildActiveTripsTab(),
                 _buildAllTripsTab(),
                 _buildScheduleTab(),
-              ],
-            ),
-          ),
-        ],
-      ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
     );
   }
 
@@ -414,18 +408,18 @@ class _TripsScreenState extends State<TripsScreen> with TickerProviderStateMixin
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
+                    children: [
+                      const Icon(
               Icons.local_shipping_outlined,
               size: 64,
-              color: Color(0xFF6B7280),
+                        color: Color(0xFF6B7280),
             ),
             const SizedBox(height: 16),
             const Text(
               'Нет активных заездов',
               style: TextStyle(
                 fontSize: 18,
-                fontWeight: FontWeight.w600,
+                            fontWeight: FontWeight.w600,
                 color: Color(0xFF1F2937),
               ),
             ),
@@ -496,9 +490,9 @@ class _TripsScreenState extends State<TripsScreen> with TickerProviderStateMixin
                 const SizedBox(height: 16),
                 
                 // Дата "с"
-                Row(
-                  children: [
-                    Expanded(
+                  Row(
+                    children: [
+                      Expanded(
                       child: GestureDetector(
                         onTap: () => _selectDate(context, true),
                         child: Container(
@@ -507,12 +501,12 @@ class _TripsScreenState extends State<TripsScreen> with TickerProviderStateMixin
                             border: Border.all(color: const Color(0xFFE5E7EB)),
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: Row(
-                            children: [
-                              const Icon(
+                        child: Row(
+                          children: [
+                            const Icon(
                                 Icons.calendar_today_outlined,
                                 size: 16,
-                                color: Color(0xFF6B7280),
+                              color: Color(0xFF6B7280),
                               ),
                               const SizedBox(width: 8),
                               Text(
@@ -527,12 +521,12 @@ class _TripsScreenState extends State<TripsScreen> with TickerProviderStateMixin
                                 ),
                               ),
                             ],
-                          ),
+                            ),
                         ),
                       ),
                     ),
                     const SizedBox(width: 12),
-                    Expanded(
+                      Expanded(
                       child: GestureDetector(
                         onTap: () => _selectDate(context, false),
                         child: Container(
@@ -541,12 +535,12 @@ class _TripsScreenState extends State<TripsScreen> with TickerProviderStateMixin
                             border: Border.all(color: const Color(0xFFE5E7EB)),
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: Row(
-                            children: [
-                              const Icon(
+                        child: Row(
+                          children: [
+                            const Icon(
                                 Icons.calendar_today_outlined,
                                 size: 16,
-                                color: Color(0xFF6B7280),
+                              color: Color(0xFF6B7280),
                               ),
                               const SizedBox(width: 8),
                               Text(
@@ -561,15 +555,15 @@ class _TripsScreenState extends State<TripsScreen> with TickerProviderStateMixin
                                 ),
                               ),
                             ],
-                          ),
+                            ),
+                        ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
                 
-                const SizedBox(height: 12),
-                
+                  const SizedBox(height: 12),
+
                 // Водитель
                 GestureDetector(
                   onTap: () => _showDriverSelector(),
@@ -579,25 +573,25 @@ class _TripsScreenState extends State<TripsScreen> with TickerProviderStateMixin
                       border: Border.all(color: const Color(0xFFE5E7EB)),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Row(
-                      children: [
-                        const Icon(
+                        child: Row(
+                          children: [
+                            const Icon(
                           Icons.person_outline,
                           size: 16,
-                          color: Color(0xFF6B7280),
-                        ),
+                              color: Color(0xFF6B7280),
+                            ),
                         const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
+                            Expanded(
+                              child: Text(
                             _selectedDriver ?? 'Все водители',
                             style: TextStyle(
-                              fontSize: 14,
+                                  fontSize: 14,
                               color: _selectedDriver != null
                                   ? const Color(0xFF1F2937)
                                   : const Color(0xFF6B7280),
+                                ),
+                              ),
                             ),
-                          ),
-                        ),
                         const Icon(
                           Icons.keyboard_arrow_down,
                           size: 16,
@@ -619,25 +613,25 @@ class _TripsScreenState extends State<TripsScreen> with TickerProviderStateMixin
                       border: Border.all(color: const Color(0xFFE5E7EB)),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Row(
-                      children: [
-                        const Icon(
+                        child: Row(
+                          children: [
+                            const Icon(
                           Icons.local_shipping_outlined,
                           size: 16,
-                          color: Color(0xFF6B7280),
-                        ),
+                              color: Color(0xFF6B7280),
+                            ),
                         const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
+                            Expanded(
+                              child: Text(
                             _selectedVehicle ?? 'Все грузовики',
                             style: TextStyle(
-                              fontSize: 14,
+                                  fontSize: 14,
                               color: _selectedVehicle != null
                                   ? const Color(0xFF1F2937)
                                   : const Color(0xFF6B7280),
+                                ),
+                              ),
                             ),
-                          ),
-                        ),
                         const Icon(
                           Icons.keyboard_arrow_down,
                           size: 16,
@@ -693,9 +687,9 @@ class _TripsScreenState extends State<TripsScreen> with TickerProviderStateMixin
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    const Icon(
+                    Row(
+                      children: [
+                        const Icon(
                       Icons.event_note_outlined,
                       size: 20,
                       color: Color(0xFF2679DB),
@@ -751,7 +745,7 @@ class _TripsScreenState extends State<TripsScreen> with TickerProviderStateMixin
                       ),
                     ),
                   ),
-              ],
+                ],
             ),
           ),
         ],
@@ -789,8 +783,8 @@ class _TripsScreenState extends State<TripsScreen> with TickerProviderStateMixin
         statusBgColor = const Color(0xFFF9FAFB);
         statusText = 'Неизвестно';
     }
-
-    return Container(
+          
+          return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -831,22 +825,22 @@ class _TripsScreenState extends State<TripsScreen> with TickerProviderStateMixin
                   const SizedBox(height: 2),
                   
                   // Модель и водитель в одну строку
-                  Text(
+                              Text(
                     '${vehicle['model']} • ${driver['name'].split(' ')[0]}',
                     style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
-                      color: Color(0xFF6B7280),
-                    ),
-                  ),
+                                  color: Color(0xFF6B7280),
+                                ),
+                              ),
                   
                   const SizedBox(height: 8),
                   
                   // Маршрут
-                  Text(
+                              Text(
                     '${trip['start_location']} → ${trip['end_location']}',
                     style: const TextStyle(
-                      fontSize: 14,
+                                  fontSize: 14,
                       fontWeight: FontWeight.w600,
                       color: Color(0xFF374151),
                     ),
@@ -859,11 +853,11 @@ class _TripsScreenState extends State<TripsScreen> with TickerProviderStateMixin
                     trip['border_crossing'] ?? 'Пункт пропуска не указан',
                     style: const TextStyle(
                       fontSize: 12,
-                      color: Color(0xFF9CA3AF),
-                    ),
-                  ),
-                ],
-              ),
+                                  color: Color(0xFF9CA3AF),
+                                ),
+                              ),
+                            ],
+                          ),
               
               // Статус в правом верхнем углу
               Positioned(

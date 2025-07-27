@@ -8,6 +8,7 @@ import 'package:webview_flutter/webview_flutter.dart';
 import 'package:intl/intl.dart';
 import '../components/app_header.dart';
 import '../components/svg_icon.dart';
+import '../components/web_image.dart';
 import 'trip_details_screen.dart';
 import 'photo_viewer_screen.dart';
 
@@ -69,21 +70,37 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> with TickerPr
         print('Данные грузовика: ${data.keys}');
         print('Фотографии в API: ${data['photos']}');
         print('Документы в API: ${data['documents']}');
+        print('Main photo URL: ${data['main_photo_url']}');
         
         setState(() {
           _fullVehicleData = data;
           _photos = data['photos'] ?? [];
           _documents = data['documents'] ?? [];
           
-          // Убираем пустые фотографии
+          // Убираем пустые фотографии и логируем каждую
           _photos = _photos.where((photo) {
             String photoUrl = photo['photo'] ?? photo['file'] ?? photo['url'] ?? '';
+            print('Проверяем фото: исходный URL = $photoUrl');
+            if (photoUrl.isNotEmpty && !photoUrl.startsWith('http')) {
+              photoUrl = 'https://barlau.org$photoUrl';
+              print('Обработанный URL = $photoUrl');
+            }
             return photoUrl.isNotEmpty;
           }).toList();
         });
         
         print('Загружено фотографий: ${_photos.length}');
         print('Загружено документов: ${_documents.length}');
+        
+        // Логируем все финальные URL фотографий
+        for (int i = 0; i < _photos.length; i++) {
+          final photo = _photos[i];
+          String photoUrl = photo['photo'] ?? photo['file'] ?? photo['url'] ?? '';
+          if (photoUrl.isNotEmpty && !photoUrl.startsWith('http')) {
+            photoUrl = 'https://barlau.org$photoUrl';
+          }
+          print('Финальное фото $i: $photoUrl');
+        }
       }
     } catch (e) {
       print('Ошибка загрузки данных: $e');
@@ -336,12 +353,12 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> with TickerPr
               indicatorColor: const Color(0xFF2679DB),
               indicatorWeight: 2,
               labelStyle: const TextStyle(
-                fontSize: 16,
                 fontWeight: FontWeight.w600,
+                fontSize: 14,
               ),
               unselectedLabelStyle: const TextStyle(
-                fontSize: 16,
                 fontWeight: FontWeight.w500,
+                fontSize: 14,
               ),
               tabs: const [
                 Tab(text: 'Основное'),
@@ -957,23 +974,26 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> with TickerPr
                 photoUrl = 'https://barlau.org$photoUrl';
               }
               
+              // Добавляем подробное логирование
+              print('PhotoGallery: Фото $index - исходный URL: ${photo['photo'] ?? photo['file'] ?? photo['url'] ?? 'НЕТ'}');
+              print('PhotoGallery: Фото $index - обработанный URL: $photoUrl');
+              
               return GestureDetector(
                 onTap: () => _showPhotoViewer(photoUrl, index),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(8),
                   child: photoUrl.isNotEmpty
-                      ? Image.network(
-                          photoUrl,
+                      ? WebCompatibleImage(
+                          imageUrl: photoUrl,
                           fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              color: const Color(0xFFF3F4F6),
-                              child: const Icon(
-                                Icons.image_not_supported,
-                                color: Color(0xFF9CA3AF),
-                              ),
-                            );
-                          },
+                          placeholderType: 'gallery',
+                          errorWidget: Container(
+                            color: const Color(0xFFF3F4F6),
+                            child: const Icon(
+                              Icons.image_not_supported,
+                              color: Color(0xFF9CA3AF),
+                            ),
+                          ),
                         )
                       : Container(
                           color: const Color(0xFFF3F4F6),

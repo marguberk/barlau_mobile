@@ -50,10 +50,15 @@ class AuthProvider with ChangeNotifier {
   Future<void> _removeUserFromLocal() async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      // Удаляем все данные авторизации
       await prefs.remove('user_profile');
-      print('AuthProvider: Профиль удален из локального хранилища');
+      await prefs.remove('auth_token');
+      await prefs.remove('user_role');
+      await prefs.remove('user_name');
+      await prefs.remove('user_id');
+      print('AuthProvider: Все данные авторизации удалены из локального хранилища');
     } catch (e) {
-      print('AuthProvider: Ошибка удаления профиля: $e');
+      print('AuthProvider: Ошибка удаления данных авторизации: $e');
     }
   }
 
@@ -63,44 +68,55 @@ class AuthProvider with ChangeNotifier {
 
     try {
       print('AuthProvider: Начинаем проверку статуса авторизации');
-      // Сначала пробуем загрузить из локального хранилища
+      
+      // Проверяем все необходимые данные авторизации
+      final prefs = await SharedPreferences.getInstance();
+      final userProfile = prefs.getString('user_profile');
+      final authToken = prefs.getString('auth_token');
+      final userRole = prefs.getString('user_role');
+      
+      print('AuthProvider: Проверяем данные авторизации:');
+      print('AuthProvider: user_profile: ${userProfile != null ? 'есть' : 'нет'}');
+      print('AuthProvider: auth_token: ${authToken != null ? 'есть' : 'нет'}');
+      print('AuthProvider: user_role: ${userRole != null ? 'есть' : 'нет'}');
+      
+      // Проверяем, есть ли все необходимые данные
+      if (userProfile != null && authToken != null && userRole != null) {
+        // Загружаем пользователя из локального хранилища
       final localUser = await _loadUserFromLocal();
       if (localUser != null) {
         _user = localUser;
         _isAuthenticated = true;
         _error = null;
-        print('AuthProvider: Профиль загружен из локального хранилища');
-        print('AuthProvider: Используем локально сохраненный профиль');
-      }
-
-      // Если есть локальные данные, используем их как основные
-      if (localUser != null) {
-        print('AuthProvider: Найдены локальные данные, используем их');
-        _isAuthenticated = true;
+          print('AuthProvider: Пользователь авторизован - ${localUser.username} (${localUser.role})');
+        } else {
+          print('AuthProvider: Ошибка загрузки профиля пользователя');
+          _isAuthenticated = false;
+          _user = null;
         _error = null;
+          // Очищаем поврежденные данные
+          await _removeUserFromLocal();
+        }
       } else {
-        print('AuthProvider: Локальных данных нет, требуется авторизация');
+        print('AuthProvider: Неполные данные авторизации, требуется повторный вход');
         _isAuthenticated = false;
         _user = null;
         _error = null;
+        // Очищаем неполные данные
+        await _removeUserFromLocal();
       }
     } catch (e) {
-      // Если произошла ошибка, но есть локальные данные - используем их
-      final localUser = await _loadUserFromLocal();
-      if (localUser != null) {
-        _user = localUser;
-        _isAuthenticated = true;
-        _error = null;
-        print('AuthProvider: Используем локальные данные из-за ошибки сети');
-      } else {
+      print('AuthProvider: Ошибка проверки авторизации: $e');
         _isAuthenticated = false;
         _user = null;
         _error = 'Ошибка проверки авторизации';
-      }
+      // Очищаем данные при ошибке
+      await _removeUserFromLocal();
     }
 
     _isLoading = false;
     notifyListeners();
+    print('AuthProvider: Статус авторизации: ${_isAuthenticated ? 'авторизован' : 'не авторизован'}');
   }
 
   Future<bool> login(String username, String password) async {
@@ -126,6 +142,11 @@ class AuthProvider with ChangeNotifier {
           // Сохраняем пользователя локально
           await _saveUserToLocal(_user!);
           print('AuthProvider: Пользователь сохранен локально');
+          
+          // Дополнительно сохраняем ID пользователя
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setInt('user_id', _user!.id);
+          print('AuthProvider: ID пользователя сохранен: ${_user!.id}');
         }
         _isAuthenticated = true;
         _error = null;
@@ -155,23 +176,31 @@ class AuthProvider with ChangeNotifier {
   }
 
   Future<void> logout() async {
+    print('AuthProvider: Начинаем выход из аккаунта');
     _isLoading = true;
     notifyListeners();
 
     try {
       await _apiService.logout();
     } catch (e) {
+      print('AuthProvider: Ошибка при вызове API logout: $e');
       // Игнорируем ошибки при выходе
     }
 
+    // Сначала удаляем локальные данные
+    await _removeUserFromLocal();
+    
+    // Затем очищаем состояние
     _user = null;
     _isAuthenticated = false;
     _error = null;
     _isLoading = false;
     
-    // Удаляем локальные данные
-    await _removeUserFromLocal();
+    print('AuthProvider: Выход из аккаунта завершен');
+    notifyListeners();
     
+    // Принудительно обновляем состояние для перехода на страницу входа
+    await Future.delayed(const Duration(milliseconds: 100));
     notifyListeners();
   }
 
@@ -202,30 +231,31 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      // Здесь будет вызов API для обновления профиля
-      // Пока что обновляем локально
-      
-      String? newProfilePicture = _user!.profilePicture;
-      
-      if (removeAvatar) {
-        newProfilePicture = null;
-        print('AuthProvider: Удаляем аватарку');
-      } else if (profilePicture != null) {
-        newProfilePicture = profilePicture;
-        print('AuthProvider: Новая аватарка: $profilePicture');
-      }
-      
-      final oldUser = _user;
-      _user = User(
-        id: _user!.id,
-        username: _user!.username,
+      // Отправляем обновление на сервер через SafeApiService
+      final result = await SafeApiService.updateUserProfile(
         firstName: firstName,
         lastName: lastName,
         email: email,
         phone: phone,
+        profilePicture: profilePicture,
+        removeAvatar: removeAvatar,
+      );
+
+      if (result['success'] && result['data'] != null) {
+        print('AuthProvider: Профиль успешно обновлен на сервере');
+        
+        // Обновляем локальный объект пользователя
+        final userData = result['data'];
+        _user = User(
+          id: _user!.id,
+          username: _user!.username,
+          firstName: userData['first_name'] ?? firstName,
+          lastName: userData['last_name'] ?? lastName,
+          email: userData['email'] ?? email,
+          phone: userData['phone'] ?? phone,
         role: _user!.role,
         isActive: _user!.isActive,
-        profilePicture: newProfilePicture,
+          profilePicture: userData['profile_picture'] ?? _user!.profilePicture,
       );
 
       print('AuthProvider: Обновленный пользователь создан');
@@ -239,8 +269,16 @@ class AuthProvider with ChangeNotifier {
       notifyListeners();
       print('AuthProvider: notifyListeners() вызван');
       return true;
+      } else {
+        print('AuthProvider: Ошибка обновления профиля на сервере: ${result['error']}');
+        _error = result['error'] ?? 'Ошибка обновления профиля';
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
     } catch (e) {
-      _error = 'Ошибка обновления профиля';
+      print('AuthProvider: Исключение при обновлении профиля: $e');
+      _error = 'Ошибка обновления профиля: $e';
       _isLoading = false;
       notifyListeners();
       return false;

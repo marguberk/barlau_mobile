@@ -1,10 +1,12 @@
 import 'dart:convert';
 import 'dart:typed_data';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import '../config/app_config.dart';
 
 class SafeApiService {
-  static const String prodUrl = 'https://barlau.org/api';
+  static String get prodUrl => AppConfig.baseApiUrl;
   static const Duration timeout = Duration(seconds: 5);
   
   // Безопасный HTTP запрос с таймаутом
@@ -15,7 +17,9 @@ class SafeApiService {
     Map<String, String>? headers,
   }) async {
     try {
-      final uri = Uri.parse('$prodUrl$endpoint');
+      final uri = Uri.parse('${AppConfig.baseApiUrl}$endpoint');
+      print('🌐 SafeAPI Request: $method $uri');
+      
       final defaultHeaders = {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
@@ -52,6 +56,8 @@ class SafeApiService {
           ).timeout(timeout);
       }
       
+      print('🌐 SafeAPI Response: ${response.statusCode}');
+      
       if (response.statusCode >= 200 && response.statusCode < 300) {
         final data = response.body.isNotEmpty 
             ? jsonDecode(response.body) 
@@ -69,7 +75,7 @@ class SafeApiService {
         };
       }
     } catch (e) {
-      print('SafeApiService: Ошибка запроса к $endpoint - $e');
+      print('🔴 SafeApiService: Ошибка запроса к $endpoint - $e');
       return {
         'success': false,
         'error': 'Ошибка сети: $e',
@@ -93,74 +99,9 @@ class SafeApiService {
     try {
       print('SafeApiService: Попытка входа для $username');
       
-      // Для демо режима
-      if (username == 'admin' && password == 'admin') {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('auth_token', 'demo_token');
-        await prefs.setString('user_role', 'SUPERADMIN');
-        await prefs.setString('user_name', 'admin');
-        
-        return {
-          'success': true,
-          'data': {
-            'token': 'demo_token',
-            'user': {
-              'id': 1,
-              'username': 'admin',
-              'first_name': 'Администратор',
-              'last_name': 'BARLAU.KZ',
-              'email': 'admin@barlau.kz',
-              'phone': '+7 777 123 45 67',
-              'role': 'SUPERADMIN',
-              'is_active': true,
-            }
-          }
-        };
-      }
-      
-      // Для тестовых водителей
-      if ((username == 'yunus' || username == 'arman') && password == '123') {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('auth_token', 'demo_driver_token');
-        await prefs.setString('user_role', 'DRIVER');
-        await prefs.setString('user_name', username);
-        
-        Map<String, dynamic> userData = {
-          'id': username == 'yunus' ? 15 : 16,
-          'username': username,
-          'role': 'DRIVER',
-          'is_active': true,
-        };
-        
-        if (username == 'yunus') {
-          userData.addAll({
-            'first_name': 'Юнус',
-            'last_name': 'Алиев',
-            'email': 'yunus@gmail.com',
-            'phone': '+7 (777) 159 03 06',
-          });
-        } else {
-          userData.addAll({
-            'first_name': 'Арман',
-            'last_name': 'Вадиев',
-            'email': 'arman@gmail.com',
-            'phone': '+7 (777) 123 45 67',
-          });
-        }
-        
-        print('SafeApiService: Водитель $username успешно авторизован');
-        return {
-          'success': true,
-          'data': {
-            'token': 'demo_driver_token',
-            'user': userData,
-          }
-        };
-      }
-      
       // Пробуем реальную авторизацию через JWT endpoint
-      print('SafeApiService: Отправляем запрос к /auth/token/');
-      final result = await safeRequest('/auth/token/', 
+      print('SafeApiService: Отправляем запрос к /v1/auth/token/');
+      final result = await safeRequest('/v1/auth/token/', 
         method: 'POST',
         body: {
           'username': username,
@@ -168,125 +109,79 @@ class SafeApiService {
         }
       );
       
-      print('SafeApiService: Результат авторизации: ${result['success']}');
-      if (result['success']) {
-        print('SafeApiService: Токен получен: ${result['data']['access'] != null}');
+      if (result['success'] && result['data'] != null) {
+        print('SafeApiService: Успешная авторизация через API');
         
-        // JWT возвращает access и refresh токены
-        if (result['data']['access'] != null) {
+        // Сохраняем реальный токен из ответа API
           final prefs = await SharedPreferences.getInstance();
-          await prefs.setString('auth_token', result['data']['access']);
-          await prefs.setString('refresh_token', result['data']['refresh'] ?? '');
+        final token = result['data']['access'] ?? result['data']['token'];
+        if (token != null) {
+          await prefs.setString('auth_token', token);
+          print('SafeApiService: Реальный токен сохранен: ${token.substring(0, 20)}...');
+        }
+        
+        // Получаем данные пользователя
+        print('SafeApiService: Получаем данные пользователя...');
+        final userResult = await safeRequest('/v1/users/me/', headers: {
+          'Authorization': 'Bearer $token',
+        });
+        
+        if (userResult['success'] && userResult['data'] != null) {
+          final userData = userResult['data'];
+          final userRole = userData['role'] ?? 'DRIVER';
           
-          // Получаем информацию о пользователе отдельным запросом
-          print('SafeApiService: Получаем профиль пользователя');
+          // Сохраняем данные пользователя
+          await prefs.setString('user_role', userRole);
+          await prefs.setString('user_name', username);
+          await prefs.setString('user_profile', jsonEncode(userData));
           
-          // Пробуем разные endpoints для получения профиля
-          List<String> profileEndpoints = ['/employees/me/', '/users/me/', '/profile/'];
-          Map<String, dynamic>? profileResult;
-          
-          for (String endpoint in profileEndpoints) {
-            print('SafeApiService: Пробуем endpoint $endpoint');
-            final tempResult = await safeRequest(endpoint, 
-              headers: {
-                'Authorization': 'Bearer ${result['data']['access']}',
-              }
-            );
-            if (tempResult['success']) {
-              profileResult = tempResult;
-              print('SafeApiService: Успешно получен профиль через $endpoint');
-              break;
-            }
-          }
-          
-          if (profileResult != null && profileResult['success']) {
-            final user = profileResult['data'];
-            await prefs.setString('user_role', user['role'] ?? 'DRIVER');
-            await prefs.setString('user_name', user['username'] ?? username);
+          print('SafeApiService: Данные пользователя сохранены - роль: $userRole');
             
             return {
               'success': true,
               'data': {
-                'token': result['data']['access'],
-                'user': user,
+              'token': token,
+              'user': userData,
               }
             };
           } else {
-            print('SafeApiService: Не удалось получить профиль через API');
-            // Декодируем JWT токен для получения информации о пользователе
-            try {
-              final tokenParts = result['data']['access'].split('.');
-              if (tokenParts.length >= 2) {
-                final payload = tokenParts[1];
-                // Добавляем padding если нужно
-                String normalizedPayload = payload;
-                switch (payload.length % 4) {
-                  case 1:
-                    normalizedPayload += '===';
-                    break;
-                  case 2:
-                    normalizedPayload += '==';
-                    break;
-                  case 3:
-                    normalizedPayload += '=';
-                    break;
-                }
-                
-                final decodedBytes = base64Decode(normalizedPayload);
-                final decodedPayload = utf8.decode(decodedBytes);
-                final tokenData = jsonDecode(decodedPayload);
-                
-                print('SafeApiService: Данные из JWT токена: $tokenData');
-                
+          print('SafeApiService: Ошибка получения данных пользователя: ${userResult['error']}');
+          // Возвращаем данные без профиля пользователя
                 return {
                   'success': true,
                   'data': {
-                    'token': result['data']['access'],
-                    'user': {
-                      'id': tokenData['user_id'] ?? 0,
-                      'username': tokenData['username'] ?? username,
-                      'first_name': tokenData['first_name'] ?? '',
-                      'last_name': tokenData['last_name'] ?? '',
-                      'email': tokenData['email'] ?? '',
-                      'phone': tokenData['phone'] ?? '',
-                      'role': tokenData['role'] ?? 'DRIVER',
-                      'is_active': true,
-                    }
+              'token': token,
+              'user': {'username': username, 'role': 'DRIVER'},
                   }
                 };
               }
-            } catch (e) {
-              print('SafeApiService: Ошибка декодирования JWT: $e');
-            }
-            
-            // Создаем базовый профиль пользователя
-            return {
-              'success': true,
-              'data': {
-                'token': result['data']['access'],
-                'user': {
-                  'username': username,
-                  'first_name': '',
-                  'last_name': '',
-                  'email': '',
-                  'phone': '',
-                  'role': 'DRIVER',
-                  'is_active': true,
-                }
-              }
-            };
-          }
-        }
       } else {
-        print('SafeApiService: Ошибка авторизации: ${result['error']}');
+        print('SafeApiService: Ошибка авторизации через API: ${result['error']}');
+        
+        // Определяем конкретную ошибку
+        String errorMessage = 'Неверный логин или пароль';
+        if (result['error'] != null) {
+          if (result['error'].toString().contains('401') || result['error'].toString().contains('Unauthorized')) {
+            errorMessage = 'Неверный логин или пароль';
+          } else if (result['error'].toString().contains('400') || result['error'].toString().contains('Bad Request')) {
+            errorMessage = 'Неверный формат данных';
+          } else if (result['error'].toString().contains('500') || result['error'].toString().contains('Internal Server Error')) {
+            errorMessage = 'Ошибка сервера, попробуйте позже';
+          } else if (result['error'].toString().contains('timeout') || result['error'].toString().contains('Connection')) {
+            errorMessage = 'Нет подключения к серверу';
+          }
       }
       
-      return result;
+        return {
+          'success': false,
+          'error': errorMessage,
+        };
+      }
     } catch (e) {
-      print('SafeApiService: Исключение при авторизации: $e');
+      print('SafeApiService: Ошибка авторизации: $e');
       return {
         'success': false,
-        'error': 'Ошибка авторизации: $e',
+        'error': 'Ошибка сети: $e',
       };
     }
   }
@@ -319,6 +214,100 @@ class SafeApiService {
         'data': fallbackData,
         'source': 'fallback',
         'warning': 'Сервер недоступен, используются тестовые данные',
+      };
+    }
+  }
+
+  // Обновление профиля пользователя
+  static Future<Map<String, dynamic>> updateUserProfile({
+    required String firstName,
+    required String lastName,
+    required String email,
+    required String phone,
+    String? profilePicture,
+    bool removeAvatar = false,
+  }) async {
+    try {
+      print('SafeApiService: Обновление профиля пользователя');
+      
+      // Получаем токен авторизации
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token');
+      
+      if (token == null) {
+        return {
+          'success': false,
+          'error': 'Токен авторизации не найден',
+        };
+      }
+
+      // Подготавливаем данные для отправки
+      final updateData = <String, dynamic>{
+        'first_name': firstName,
+        'last_name': lastName,
+        'email': email,
+        'phone': phone,
+      };
+
+      if (removeAvatar) {
+        updateData['photo'] = null;
+      } else if (profilePicture != null) {
+        // Загружаем фото как файл
+        try {
+          final file = File(profilePicture);
+          if (await file.exists()) {
+            final bytes = await file.readAsBytes();
+            final base64Image = base64Encode(bytes);
+            // Определяем расширение файла
+            final extension = profilePicture.split('.').last.toLowerCase();
+            final mimeType = extension == 'jpg' || extension == 'jpeg' 
+                ? 'image/jpeg' 
+                : extension == 'png' 
+                    ? 'image/png' 
+                    : 'image/jpeg';
+            updateData['photo'] = 'data:$mimeType;base64,$base64Image';
+            print('SafeApiService: Фото загружено и закодировано в base64');
+          } else {
+            print('SafeApiService: Файл фото не найден: $profilePicture');
+          }
+        } catch (e) {
+          print('SafeApiService: Ошибка загрузки фото: $e');
+        }
+      }
+
+      print('SafeApiService: Отправляем данные: $updateData');
+
+      // Отправляем запрос на обновление профиля
+      final result = await safeRequest('/v1/users/me/', 
+        method: 'PUT',
+        headers: {
+          'Authorization': 'Bearer $token',
+        },
+        body: updateData,
+      );
+
+      if (result['success'] && result['data'] != null) {
+        print('SafeApiService: Профиль успешно обновлен на сервере');
+        
+        // Обновляем локальные данные пользователя
+        await prefs.setString('user_profile', jsonEncode(result['data']));
+        
+        return {
+          'success': true,
+          'data': result['data'],
+        };
+      } else {
+        print('SafeApiService: Ошибка обновления профиля: ${result['error']}');
+        return {
+          'success': false,
+          'error': result['error'] ?? 'Ошибка обновления профиля',
+        };
+      }
+    } catch (e) {
+      print('SafeApiService: Ошибка обновления профиля: $e');
+      return {
+        'success': false,
+        'error': 'Ошибка сети: $e',
       };
     }
   }

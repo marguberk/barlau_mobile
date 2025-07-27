@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../components/app_header.dart';
 import 'vehicle_detail_screen.dart';
+import '../components/web_image.dart';
 
 class VehiclesScreen extends StatefulWidget {
   const VehiclesScreen({super.key});
@@ -113,12 +114,6 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
       appBar: AppHeader(
         title: 'Грузовики',
         isConnected: true,
-        onNotificationTap: () {
-          // Обработка нажатия на уведомления
-        },
-        onProfileTap: () {
-          // Переход к профилю
-        },
       ),
       body: _isLoading
           ? const Center(
@@ -140,6 +135,7 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
                       Text(
                         'Нет грузовиков',
                         style: TextStyle(
+    fontFamily: 'SF Pro Display',
                           fontSize: 18,
                           fontWeight: FontWeight.w600,
                           color: Color(0xFF1F2937),
@@ -149,6 +145,7 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
                       Text(
                         'Грузовики не найдены',
                         style: TextStyle(
+    fontFamily: 'SF Pro Display',
                           fontSize: 14,
                           color: Color(0xFF6B7280),
                         ),
@@ -202,29 +199,17 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
                                     child: ClipRRect(
                                       borderRadius: BorderRadius.circular(7),
                                       child: vehicle['main_photo_url'] != null && vehicle['main_photo_url'].isNotEmpty
-                                          ? Image.network(
-                                              vehicle['main_photo_url'],
+                                          ? WebCompatibleImage(
+                                              imageUrl: vehicle['main_photo_url'],
+                                              width: 100,
+                                              height: 70,
                                               fit: BoxFit.cover,
-                                              errorBuilder: (context, error, stackTrace) {
-                                                return const Icon(
-                                                  Icons.local_shipping,
-                                                  size: 32,
-                                                  color: Color(0xFF2679DB),
-                                                );
-                                              },
-                                              loadingBuilder: (context, child, loadingProgress) {
-                                                if (loadingProgress == null) return child;
-                                                return const Center(
-                                                  child: SizedBox(
-                                                    width: 20,
-                                                    height: 20,
-                                                    child: CircularProgressIndicator(
-                                                      strokeWidth: 2,
-                                                      color: Color(0xFF2679DB),
-                                                    ),
-                                                  ),
-                                                );
-                                              },
+                                              placeholderType: 'list',
+                                              errorWidget: const Icon(
+                                                Icons.local_shipping,
+                                                size: 32,
+                                                color: Color(0xFF2679DB),
+                                              ),
                                             )
                                           : const Icon(
                                               Icons.local_shipping,
@@ -245,6 +230,7 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
                                         Text(
                                           vehicle['number'],
                                           style: const TextStyle(
+    fontFamily: 'SF Pro Display',
                                             fontSize: 16,
                                             fontWeight: FontWeight.w700,
                                             color: Color(0xFF111827),
@@ -257,6 +243,7 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
                                         Text(
                                           '${vehicle['brand']} ${vehicle['model']} ${vehicle['year'].isNotEmpty ? '(${vehicle['year']})' : ''}',
                                           style: const TextStyle(
+    fontFamily: 'SF Pro Display',
                                             fontSize: 14,
                                             fontWeight: FontWeight.w500,
                                             color: Color(0xFF6B7280),
@@ -279,6 +266,7 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
                                                 child: Text(
                                                   vehicle['driver'],
                                                   style: const TextStyle(
+    fontFamily: 'SF Pro Display',
                                                     fontSize: 13,
                                                     color: Color(0xFF6B7280),
                                                   ),
@@ -310,6 +298,7 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
                                   child: Text(
                                     vehicle['status'],
                                     style: TextStyle(
+    fontFamily: 'SF Pro Display',
                                       fontSize: 11,
                                       fontWeight: FontWeight.w600,
                                       color: vehicle['statusColor'],

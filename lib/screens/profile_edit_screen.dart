@@ -5,6 +5,7 @@ import 'dart:io';
 import '../providers/auth_provider.dart';
 import '../models/user.dart';
 import '../components/app_header.dart';
+import 'login_screen.dart';
 
 class ProfileEditScreen extends StatefulWidget {
   const ProfileEditScreen({super.key});
@@ -69,8 +70,31 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
           final user = authProvider.user;
           
           if (user == null) {
+            // Автоматически перенаправляем на страницу входа
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (context) => const LoginScreen()),
+                (route) => false,
+              );
+            });
             return const Center(
-              child: Text('Пользователь не найден'),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF2679DB)),
+                  ),
+                  SizedBox(height: 16),
+                  Text(
+                    'Перенаправление на страницу входа...',
+                    style: TextStyle(
+                      fontFamily: 'SF Pro Display',
+                      fontSize: 16,
+                      color: Color(0xFF6B7280),
+                    ),
+                  ),
+                ],
+              ),
             );
           }
 

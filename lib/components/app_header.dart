@@ -87,6 +87,7 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
                 child: Text(
                   title,
                   style: const TextStyle(
+                    fontFamily: 'SF Pro Display',
                     fontSize: 24,
                     fontWeight: FontWeight.w700,
                     color: Color(0xFF1F2937),
@@ -148,6 +149,7 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
                                           ? '99+' 
                                           : notificationProvider.unreadCount.toString(),
                                       style: const TextStyle(
+                                        fontFamily: 'SF Pro Display',
                                         color: Colors.white,
                                         fontSize: 10,
                                         fontWeight: FontWeight.w600,

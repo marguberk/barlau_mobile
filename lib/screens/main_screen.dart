@@ -108,13 +108,13 @@ class _MainScreenState extends State<MainScreen> {
       ),
       BottomNavigationBarItem(
         icon: SvgIcon(
-          assetName: 'truck.svg',
+          assetName: 'location.svg',
           width: 20,
           height: 20,
           color: const Color(0xFF9CA3AF),
         ),
         activeIcon: SvgIcon(
-          assetName: 'truck.svg',
+          assetName: 'location.svg',
           width: 20,
           height: 20,
           color: const Color(0xFF2679DB),
@@ -123,13 +123,13 @@ class _MainScreenState extends State<MainScreen> {
       ),
       BottomNavigationBarItem(
         icon: SvgIcon(
-          assetName: 'location.svg',
+          assetName: 'truck.svg',
           width: 20,
           height: 20,
           color: const Color(0xFF9CA3AF),
         ),
         activeIcon: SvgIcon(
-          assetName: 'location.svg',
+          assetName: 'truck.svg',
           width: 20,
           height: 20,
           color: const Color(0xFF2679DB),
@@ -201,10 +201,12 @@ class _MainScreenState extends State<MainScreen> {
           selectedItemColor: const Color(0xFF2679DB),
           unselectedItemColor: const Color(0xFF9CA3AF),
           selectedLabelStyle: const TextStyle(
+            fontFamily: 'SF Pro Display',
             fontWeight: FontWeight.w600,
             fontSize: 10,
           ),
           unselectedLabelStyle: const TextStyle(
+            fontFamily: 'SF Pro Display',
             fontWeight: FontWeight.w500,
             fontSize: 10,
           ),

@@ -127,12 +127,8 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> {
         title: 'Заезд #${widget.trip['id']}',
         isConnected: true,
         showBackButton: true,
-        onNotificationTap: () {
-          // Обработка нажатия на уведомления
-        },
-        onProfileTap: () {
-          // Обработка нажатия на профиль
-        },
+        showNotificationIcon: false,
+        showProfileIcon: false,
       ),
       body: SingleChildScrollView(
         child: Column(
@@ -170,6 +166,7 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> {
                             Text(
                               '${vehicle['number']} • ${vehicle['model']}',
                               style: const TextStyle(
+    fontFamily: 'SF Pro Display',
                                 fontSize: 20,
                                 fontWeight: FontWeight.w700,
                                 color: Color(0xFF111827),
@@ -179,6 +176,7 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> {
                             Text(
                               'Водитель: ${driver['name']}',
                               style: const TextStyle(
+    fontFamily: 'SF Pro Display',
                                 fontSize: 14,
                                 fontWeight: FontWeight.w500,
                                 color: Color(0xFF6B7280),
@@ -212,6 +210,7 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> {
                             Text(
                               statusText,
                               style: TextStyle(
+    fontFamily: 'SF Pro Display',
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
                                 color: statusColor,
@@ -274,6 +273,7 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> {
                               const Text(
                                 'Прогресс поездки',
                                 style: TextStyle(
+    fontFamily: 'SF Pro Display',
                                   fontSize: 14,
                                   fontWeight: FontWeight.w600,
                                   color: Color(0xFF374151),
@@ -283,6 +283,7 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> {
                               Text(
                                 '${(widget.trip['progress'] * 100).round()}%',
                                 style: const TextStyle(
+    fontFamily: 'SF Pro Display',
                                   fontSize: 16,
                                   fontWeight: FontWeight.w700,
                                   color: Color(0xFF2679DB),
@@ -489,6 +490,7 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> {
                               Text(
                                 'Загрузка маршрута...',
                                 style: TextStyle(
+    fontFamily: 'SF Pro Display',
                                   color: Colors.white,
                                   fontSize: 16,
                                   fontWeight: FontWeight.w500,
@@ -583,6 +585,7 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> {
                   const Text(
                     'Контакты',
                     style: TextStyle(
+    fontFamily: 'SF Pro Display',
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
                       color: Color(0xFF1F2937),
@@ -613,6 +616,7 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> {
                             Text(
                               driver['name'],
                               style: const TextStyle(
+    fontFamily: 'SF Pro Display',
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
                                 color: Color(0xFF1F2937),
@@ -622,6 +626,7 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> {
                             Text(
                               driver['phone'],
                               style: const TextStyle(
+    fontFamily: 'SF Pro Display',
                                 fontSize: 14,
                                 color: Color(0xFF6B7280),
                               ),
@@ -777,6 +782,7 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> {
            child: Text(
              title,
              style: const TextStyle(
+    fontFamily: 'SF Pro Display',
                fontSize: 14,
                fontWeight: FontWeight.w500,
                color: Color(0xFF6B7280),
@@ -787,6 +793,7 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> {
            child: Text(
              content,
              style: const TextStyle(
+    fontFamily: 'SF Pro Display',
                fontSize: 14,
                fontWeight: FontWeight.w600,
                color: Color(0xFF111827),
@@ -803,6 +810,7 @@ class _TripDetailsScreenState extends State<TripDetailsScreen> {
        child: Text(
          text,
          style: const TextStyle(
+    fontFamily: 'SF Pro Display',
            fontSize: 13,
            color: Color(0xFF9CA3AF),
          ),
@@ -1053,6 +1061,7 @@ class _FullScreenMapScreenState extends State<FullScreenMapScreen> {
                   Text(
                     'Заезд #${widget.trip['id']}',
                     style: const TextStyle(
+    fontFamily: 'SF Pro Display',
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
                       color: Color(0xFF1F2937),
@@ -1062,6 +1071,7 @@ class _FullScreenMapScreenState extends State<FullScreenMapScreen> {
                   Text(
                     '${widget.trip['start_location']} → ${widget.trip['end_location']}',
                     style: const TextStyle(
+    fontFamily: 'SF Pro Display',
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                       color: Color(0xFF2679DB),
@@ -1071,6 +1081,7 @@ class _FullScreenMapScreenState extends State<FullScreenMapScreen> {
                   Text(
                     '${widget.trip['vehicle']['number']} • ${widget.trip['driver']['name']}',
                     style: const TextStyle(
+    fontFamily: 'SF Pro Display',
                       fontSize: 14,
                       color: Color(0xFF6B7280),
                     ),

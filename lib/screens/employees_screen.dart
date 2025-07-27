@@ -30,8 +30,8 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
     });
 
     final urls = [
-      'https://barlau.org/api/employees/',
       'http://localhost:8000/api/employees/',
+      'https://barlau.org/api/employees/',
     ];
 
     for (String url in urls) {
@@ -55,6 +55,9 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
           } else if (data is List) {
             employees = List<Map<String, dynamic>>.from(data);
           }
+          
+          // Маппим поля Django API в формат Flutter
+          employees = employees.map((employee) => _mapEmployeeFields(employee)).toList();
           
           setState(() {
             allEmployees = employees;
@@ -258,6 +261,7 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
                       Text(
                         'Сотрудники не найдены',
                         style: TextStyle(
+    fontFamily: 'SF Pro Display',
                           fontSize: 18,
                           color: Color(0xFF6B7280),
                         ),
@@ -359,6 +363,7 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
                                 child: Text(
                                   initials,
                                   style: const TextStyle(
+    fontFamily: 'SF Pro Display',
                                     color: Colors.white,
                                     fontSize: 12,
                                     fontWeight: FontWeight.w600,
@@ -372,6 +377,7 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
                           child: Text(
                             initials,
                             style: const TextStyle(
+    fontFamily: 'SF Pro Display',
                               color: Colors.white,
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
@@ -385,6 +391,7 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
                   child: Text(
                     fullName,
                     style: const TextStyle(
+    fontFamily: 'SF Pro Display',
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                       color: Color(0xFF1F2937),
@@ -425,6 +432,7 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
                               child: Text(
                                 roleDisplay,
                                 style: TextStyle(
+    fontFamily: 'SF Pro Display',
                                   fontSize: 11,
                                   fontWeight: FontWeight.w500,
                                   color: roleColor,
@@ -450,6 +458,7 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
                               child: Text(
                                 phone,
                                 style: const TextStyle(
+    fontFamily: 'SF Pro Display',
                                   fontSize: 12,
                                   color: Color(0xFF6B7280),
                                 ),
@@ -472,6 +481,7 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
                             child: Text(
                               'Работает с $dateJoined',
                               style: const TextStyle(
+    fontFamily: 'SF Pro Display',
                                 fontSize: 12,
                                 color: Color(0xFF6B7280),
                               ),
@@ -517,6 +527,7 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
                       child: Text(
                         'Посмотреть резюме',
                         style: TextStyle(
+    fontFamily: 'SF Pro Display',
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
                         ),
@@ -599,5 +610,22 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
     } catch (e) {
       return 'Не указано';
     }
+  }
+
+  // Функция для маппинга полей Django API в формат Flutter
+  Map<String, dynamic> _mapEmployeeFields(Map<String, dynamic> employee) {
+    return {
+      ...employee,
+      // Маппим поля Django в поля Flutter
+      'bio': employee['about_me'] ?? employee['bio'] ?? '',
+      'education': employee['education'] ?? '',
+      'achievements': employee['achievements'] ?? '',
+      'experience': employee['experience'] ?? '',
+      'position': employee['position'] ?? '',
+      'phone': employee['phone'] ?? '',
+      'photo': employee['photo'],
+      'date_joined': employee['date_joined'],
+      'is_active': employee['is_active'] ?? true,
+    };
   }
 } 

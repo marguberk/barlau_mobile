@@ -38,8 +38,8 @@ class _EmployeeDetailScreenState extends State<EmployeeDetailScreen> {
     try {
       final employeeId = widget.employee['id'];
       final urls = [
+        'http://localhost:8000/api/employees/$employeeId/',
         'https://barlau.org/api/employees/$employeeId/',
-                  'https://barlau.org/api/employees/$employeeId/',
       ];
 
       http.Response? response;
@@ -87,11 +87,17 @@ class _EmployeeDetailScreenState extends State<EmployeeDetailScreen> {
     
     String photoStr = photoPath.toString();
     
+    // Если уже полный URL, возвращаем как есть
     if (photoStr.startsWith('http')) {
       return photoStr;
     }
     
-    return 'https://barlau.org$photoStr';
+    // Если это относительный путь, формируем полный URL
+    if (photoStr.startsWith('/')) {
+      return 'https://barlau.org$photoStr';
+    } else {
+      return 'https://barlau.org/media/$photoStr';
+    }
   }
 
   String _getInitials(String firstName, String lastName) {

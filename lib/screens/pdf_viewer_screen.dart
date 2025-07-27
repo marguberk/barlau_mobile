@@ -51,10 +51,10 @@ class _PDFViewerScreenState extends State<PDFViewerScreen> {
           onPageStarted: (String url) {
             print('WebView начал загрузку: $url');
             if (mounted) {
-              setState(() {
-                isLoading = true;
-                errorMessage = null;
-              });
+      setState(() {
+        isLoading = true;
+        errorMessage = null;
+      });
             }
           },
           onPageFinished: (String url) {
@@ -273,11 +273,11 @@ class _PDFViewerScreenState extends State<PDFViewerScreen> {
     }).catchError((error) {
       print('Ошибка загрузки URL: $error');
       if (mounted) {
-        setState(() {
-          isLoading = false;
+      setState(() {
+        isLoading = false;
           errorMessage = 'Не удалось загрузить страницу: $error';
-        });
-      }
+      });
+    }
     });
   }
 
@@ -300,28 +300,28 @@ class _PDFViewerScreenState extends State<PDFViewerScreen> {
         showNotificationIcon: false,
         showProfileIcon: false,
         actions: [
-          Container(
-            margin: const EdgeInsets.only(right: 8),
-            child: IconButton(
-              onPressed: () {
+            Container(
+              margin: const EdgeInsets.only(right: 8),
+              child: IconButton(
+                onPressed: () {
                 // Добавляем JavaScript для печати страницы
                 controller.runJavaScript('window.print();');
-              },
-              icon: Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
+                },
+                icon: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
                   color: const Color(0xFF2679DB),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
                   Icons.print,
-                  color: Colors.white,
-                  size: 20,
+                    color: Colors.white,
+                    size: 20,
+                  ),
                 ),
               ),
             ),
-          ),
         ],
       ),
       body: Column(
@@ -350,14 +350,14 @@ class _PDFViewerScreenState extends State<PDFViewerScreen> {
                     color: Color(0xFF1F2937),
                   ),
                 ),
-                const SizedBox(height: 8),
-                Text(
+                  const SizedBox(height: 8),
+                  Text(
                   'Нажмите на иконку печати для сохранения в PDF',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Color(0xFF6B7280),
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Color(0xFF6B7280),
+                    ),
                   ),
-                ),
               ],
             ),
           ),
@@ -429,19 +429,19 @@ class _PDFViewerScreenState extends State<PDFViewerScreen> {
               const SizedBox(height: 24),
               Column(
                 children: [
-                  ElevatedButton(
+              ElevatedButton(
                     onPressed: () {
                       _initializeWebView();
                     },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF2679DB),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    child: const Text('Попробовать снова'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF2679DB),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: const Text('Попробовать снова'),
                   ),
                   const SizedBox(height: 16),
                   ElevatedButton.icon(

@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:intl/intl.dart';
 import '../components/app_header.dart';
+import '../config/app_config.dart';
 
 class TasksScreen extends StatefulWidget {
   const TasksScreen({super.key});
@@ -50,8 +51,7 @@ class _TasksScreenState extends State<TasksScreen> {
     try {
       // Пробуем разные endpoints - правильный путь для задач
       final urls = [
-        'https://barlau.org/api/tasks/',
-        'http://localhost:8000/api/tasks/',
+        '${AppConfig.baseApiUrl}/tasks/',
       ];
       
       http.Response? response;
@@ -197,8 +197,7 @@ class _TasksScreenState extends State<TasksScreen> {
   Future<void> _loadEmployees() async {
     try {
       final urls = [
-        'https://barlau.org/api/employees/',
-        'http://localhost:8000/api/employees/',
+        '${AppConfig.baseApiUrl}/employees/',
       ];
       
       for (final url in urls) {
@@ -237,8 +236,7 @@ class _TasksScreenState extends State<TasksScreen> {
   Future<void> _loadVehicles() async {
     try {
       final urls = [
-        'https://barlau.org/api/vehicles/',
-        'http://localhost:8000/api/vehicles/',
+        '${AppConfig.baseApiUrl}/vehicles/',
       ];
       
       for (final url in urls) {
@@ -283,117 +281,60 @@ class _TasksScreenState extends State<TasksScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppHeader(
         title: 'Задачи',
         isConnected: errorMessage == null && allTasks.isNotEmpty,
       ),
-      body: Column(
-        children: [
-          // Индикатор подключения к базе данных
-          if (errorMessage != null)
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              color: const Color(0xFFEF4444).withOpacity(0.1),
-              child: Row(
+      body: isLoading 
+        ? const Center(child: CircularProgressIndicator(color: Color(0xFF2679DB)))
+        : errorMessage != null
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(
-                    Icons.cloud_off,
-                    size: 16,
-                    color: const Color(0xFFEF4444),
+                    Icons.error_outline,
+                    size: 64,
+                    color: Colors.grey[400],
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Используются тестовые данные (нет подключения к серверу)',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Color(0xFFEF4444),
-                      ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Работаем с тестовыми данными',
+                    style: TextStyle(
+    fontFamily: 'SF Pro Display',
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey[600],
                     ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Сервер недоступен, показываем демо',
+                    style: TextStyle(
+    fontFamily: 'SF Pro Display',
+                      fontSize: 14,
+                      color: Colors.grey[500],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    onPressed: _loadTasks,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF2679DB),
+                      foregroundColor: Colors.white,
+                    ),
+                    child: const Text('Попробовать снова'),
+                  ),
+                  const SizedBox(height: 32),
+                  // Показываем задачи даже при ошибке
+                  Expanded(
+                    child: _buildTasksList(),
                   ),
                 ],
               ),
             )
-          else if (allTasks.isNotEmpty)
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              color: const Color(0xFF10B981).withOpacity(0.1),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.cloud_done,
-                    size: 16,
-                    color: const Color(0xFF10B981),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Подключено к базе данных (${allTasks.length} задач)',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Color(0xFF10B981),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          
-          // Основной контент
-          Expanded(
-            child: isLoading 
-              ? const Center(child: CircularProgressIndicator(color: Color(0xFF2679DB)))
-              : errorMessage != null
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.error_outline,
-                          size: 64,
-                          color: Colors.grey[400],
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Работаем с тестовыми данными',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Сервер недоступен, показываем демо',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[500],
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        ElevatedButton(
-                          onPressed: _loadTasks,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF2679DB),
-                            foregroundColor: Colors.white,
-                          ),
-                          child: const Text('Попробовать снова'),
-                        ),
-                        const SizedBox(height: 32),
-                        // Показываем задачи даже при ошибке
-                        Expanded(
-                          child: _buildTasksList(),
-                        ),
-                      ],
-                    ),
-                  )
-                : _buildTasksList(),
-          ),
-        ],
-      ),
+          : _buildTasksList(),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showCreateTaskModal(),
         backgroundColor: const Color(0xFF2679DB),
@@ -456,27 +397,29 @@ class _TasksScreenState extends State<TasksScreen> {
         // Заголовок группы
         Row(
           children: [
-            Icon(icon, size: 20, color: color),
-            const SizedBox(width: 12),
+            Icon(icon, size: 18, color: color),
+            const SizedBox(width: 10),
             Text(
               title,
               style: const TextStyle(
-                fontSize: 16,
+                fontFamily: 'SF Pro Display',
+                fontSize: 15,
                 fontWeight: FontWeight.w500,
                 color: Color(0xFF111827),
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 10),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
               decoration: BoxDecoration(
                 color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
                 count.toString(),
                 style: TextStyle(
-                  fontSize: 14,
+    fontFamily: 'SF Pro Display',
+                  fontSize: 12,
                   fontWeight: FontWeight.w500,
                   color: color,
                 ),
@@ -484,7 +427,7 @@ class _TasksScreenState extends State<TasksScreen> {
             ),
           ],
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
         
         // Задачи
         if (tasks.isEmpty)
@@ -493,6 +436,7 @@ class _TasksScreenState extends State<TasksScreen> {
             child: const Text(
               'Нет задач',
               style: TextStyle(
+    fontFamily: 'SF Pro Display',
                 fontSize: 14,
                 color: Color(0xFF6B7280),
               ),
@@ -517,15 +461,7 @@ class _TasksScreenState extends State<TasksScreen> {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFFF3F4F6)),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF585C5F).withOpacity(0.10),
-                blurRadius: 32,
-                offset: const Offset(0, 16),
-                spreadRadius: -12,
-              ),
-            ],
+            border: Border.all(color: const Color(0xFFE5E7EB)),
           ),
           child: Row(
             children: [
@@ -533,82 +469,81 @@ class _TasksScreenState extends State<TasksScreen> {
               GestureDetector(
                 onTap: () => _changeTaskStatus(task),
                 child: Container(
-                  width: 20,
-                  height: 20,
+                  width: 18,
+                  height: 18,
                   decoration: BoxDecoration(
                     color: isCompleted ? const Color(0xFF2679DB) : Colors.white,
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(9),
                     border: Border.all(
                       color: isCompleted ? const Color(0xFF2679DB) : const Color(0xFFD1D5DB),
-                      width: 2,
+                      width: 1.5,
                     ),
                   ),
                   child: isCompleted
                     ? const Icon(
                         Icons.check,
-                        size: 12,
+                        size: 10,
                         color: Colors.white,
                       )
                     : null,
                 ),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 12),
               
               // Содержимое задачи
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      task['title'] ?? '',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: isCompleted ? const Color(0xFF9CA3AF) : const Color(0xFF1F2937),
-                        decoration: isCompleted ? TextDecoration.lineThrough : null,
-                      ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            task['title'] ?? '',
+                            style: TextStyle(
+    fontFamily: 'SF Pro Display',
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: isCompleted ? const Color(0xFF9CA3AF) : const Color(0xFF1F2937),
+                              decoration: isCompleted ? TextDecoration.lineThrough : null,
+                            ),
+                          ),
+                        ),
+                        _buildPriorityBadge(task['priority']),
+                      ],
                     ),
                     if (task['description'] != null && task['description'].isNotEmpty) ...[
                       const SizedBox(height: 4),
                       Text(
                         task['description'],
                         style: TextStyle(
-                          fontSize: 14,
+    fontFamily: 'SF Pro Display',
+                          fontSize: 13,
                           color: isCompleted ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280),
+                          height: 1.4,
                         ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ],
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 8),
                     
                     Row(
                       children: [
-                        // Дата
-                        Icon(
-                          Icons.schedule,
-                          size: 16,
-                          color: const Color(0xFF9CA3AF),
-                        ),
-                        const SizedBox(width: 4),
                         Text(
                           _formatDate(task['due_date']),
                           style: const TextStyle(
-                            fontSize: 14,
-                            color: Color(0xFF6B7280),
+                            fontFamily: 'SF Pro Display',
+                            fontSize: 12,
+                            color: Color(0xFF9CA3AF),
                           ),
                         ),
-                        const SizedBox(width: 16),
-                        
-                        // Приоритет
-                        _buildPriorityBadge(task['priority']),
-                        
                         const Spacer(),
                         
                         // Аватар исполнителя
                         if (task['assigned_user_details'] != null)
                           CircleAvatar(
-                            radius: 12,
+                            radius: 10,
                             backgroundColor: const Color(0xFF2679DB).withOpacity(0.1),
                             child: Text(
                               (task['assigned_user_details']['first_name'] != null && 
@@ -616,7 +551,8 @@ class _TasksScreenState extends State<TasksScreen> {
                                 ? task['assigned_user_details']['first_name'][0].toUpperCase()
                                 : 'U',
                               style: const TextStyle(
-                                fontSize: 10,
+                                fontFamily: 'SF Pro Display',
+                                fontSize: 9,
                                 fontWeight: FontWeight.w600,
                                 color: Color(0xFF2679DB),
                               ),
@@ -657,15 +593,16 @@ class _TasksScreenState extends State<TasksScreen> {
     }
     
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(3),
       ),
       child: Text(
         text,
         style: TextStyle(
-          fontSize: 12,
+    fontFamily: 'SF Pro Display',
+          fontSize: 11,
           fontWeight: FontWeight.w500,
           color: color,
         ),
@@ -707,8 +644,8 @@ class _TasksScreenState extends State<TasksScreen> {
     // Попытка обновить на сервере
     try {
       final urls = [
-        'http://85.202.192.33:8000/logistics/tasks/${task['id']}/change_status/',
-        'http://85.202.192.33:8000/api/tasks/${task['id']}/change_status/',
+        '${AppConfig.baseApiUrl}/logistics/tasks/${task['id']}/change_status/',
+        '${AppConfig.baseApiUrl}/api/tasks/${task['id']}/change_status/',
       ];
       
       for (final url in urls) {
@@ -763,9 +700,9 @@ class _TasksScreenState extends State<TasksScreen> {
   Future<void> _updateTaskStatus(int taskId, String newStatus) async {
     try {
       final urls = [
-        'https://barlau.org/api/tasks/$taskId/',
-                  'https://barlau.org/api/tasks/$taskId/',
-        'http://85.202.192.33:8000/api/tasks/$taskId/',
+        '${AppConfig.baseApiUrl}/tasks/$taskId/',
+                  '${AppConfig.baseApiUrl}/tasks/$taskId/',
+        '${AppConfig.baseApiUrl}/api/tasks/$taskId/',
       ];
       
       for (final url in urls) {
@@ -876,6 +813,7 @@ class TaskDetailsModal extends StatelessWidget {
                   child: Text(
                     task['title'] ?? '',
                     style: const TextStyle(
+                      fontFamily: 'SF Pro Display',
                       fontSize: 20,
                       fontWeight: FontWeight.w600,
                       color: Color(0xFF111827),
@@ -912,6 +850,7 @@ class TaskDetailsModal extends StatelessWidget {
                           const Text(
                             'Описание',
                             style: TextStyle(
+    fontFamily: 'SF Pro Display',
                               fontSize: 14,
                               fontWeight: FontWeight.w500,
                               color: Color(0xFF374151),
@@ -921,6 +860,7 @@ class TaskDetailsModal extends StatelessWidget {
                           Text(
                             task['description'],
                             style: const TextStyle(
+                              fontFamily: 'SF Pro Display',
                               fontSize: 14,
                               color: Color(0xFF111827),
                               height: 1.5,
@@ -969,6 +909,7 @@ class TaskDetailsModal extends StatelessWidget {
                                 })()
                               : 'Не указана',
                             style: const TextStyle(
+    fontFamily: 'SF Pro Display',
                               fontSize: 14,
                               color: Color(0xFF111827),
                             ),
@@ -991,6 +932,7 @@ class TaskDetailsModal extends StatelessWidget {
                                 })()
                               : 'Не указана',
                             style: const TextStyle(
+    fontFamily: 'SF Pro Display',
                               fontSize: 14,
                               color: Color(0xFF111827),
                             ),
@@ -1022,6 +964,7 @@ class TaskDetailsModal extends StatelessWidget {
                                   ? task['assigned_user_details']['first_name'][0].toUpperCase()
                                   : 'U',
                                 style: const TextStyle(
+    fontFamily: 'SF Pro Display',
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
                                   color: Color(0xFF2679DB),
@@ -1034,6 +977,7 @@ class TaskDetailsModal extends StatelessWidget {
                               task['assigned_user_details']['username'] ?? 
                               'Не указан',
                               style: const TextStyle(
+    fontFamily: 'SF Pro Display',
                                 fontSize: 14,
                                 fontWeight: FontWeight.w500,
                                 color: Color(0xFF111827),
@@ -1067,6 +1011,7 @@ class TaskDetailsModal extends StatelessWidget {
                                   ? task['created_by_details']['first_name'][0].toUpperCase()
                                   : 'U',
                                 style: const TextStyle(
+    fontFamily: 'SF Pro Display',
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
                                   color: Color(0xFF10B981),
@@ -1079,6 +1024,7 @@ class TaskDetailsModal extends StatelessWidget {
                               task['created_by_details']['username'] ?? 
                               'Не указан',
                               style: const TextStyle(
+    fontFamily: 'SF Pro Display',
                                 fontSize: 14,
                                 fontWeight: FontWeight.w500,
                                 color: Color(0xFF111827),
@@ -1149,6 +1095,7 @@ class TaskDetailsModal extends StatelessWidget {
         Text(
           label.toUpperCase(),
           style: const TextStyle(
+    fontFamily: 'SF Pro Display',
             fontSize: 12,
             fontWeight: FontWeight.w500,
             color: Color(0xFF6B7280),
@@ -1192,6 +1139,7 @@ class TaskDetailsModal extends StatelessWidget {
       child: Text(
         text,
         style: TextStyle(
+    fontFamily: 'SF Pro Display',
           fontSize: 12,
           fontWeight: FontWeight.w500,
           color: color,
@@ -1231,6 +1179,7 @@ class TaskDetailsModal extends StatelessWidget {
       child: Text(
         text,
         style: TextStyle(
+    fontFamily: 'SF Pro Display',
           fontSize: 12,
           fontWeight: FontWeight.w500,
           color: color,
@@ -1306,6 +1255,7 @@ class _CreateTaskModalState extends State<CreateTaskModal> {
                   child: Text(
                     'Новая задача',
                     style: TextStyle(
+    fontFamily: 'SF Pro Display',
                       fontSize: 20,
                       fontWeight: FontWeight.w600,
                       color: Color(0xFF111827),
@@ -1405,6 +1355,7 @@ class _CreateTaskModalState extends State<CreateTaskModal> {
                                   ? DateFormat('dd.MM.yyyy').format(_dueDate!)
                                   : 'Выберите дату',
                                 style: TextStyle(
+    fontFamily: 'SF Pro Display',
                                   color: _dueDate != null 
                                     ? const Color(0xFF111827)
                                     : const Color(0xFF6B7280),
@@ -1486,7 +1437,8 @@ class _CreateTaskModalState extends State<CreateTaskModal> {
                             ),
                             child: const Text(
                               'Отмена',
-                              style: TextStyle(color: Color(0xFF374151)),
+                              style: TextStyle(
+    fontFamily: 'SF Pro Display',color: Color(0xFF374151)),
                             ),
                           ),
                         ),
@@ -1561,7 +1513,7 @@ class _CreateTaskModalState extends State<CreateTaskModal> {
       };
 
       final response = await http.post(
-        Uri.parse('http://85.202.192.33:8000/api/tasks/'),
+        Uri.parse('${AppConfig.baseApiUrl}/api/tasks/'),
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',

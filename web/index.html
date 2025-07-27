@@ -18,21 +18,73 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="BARLAU.KZ - Логистическая система управления">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="barlau_flutter">
+  <meta name="apple-mobile-web-app-title" content="BARLAU.KZ">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>barlau_flutter</title>
+  <title>BARLAU.KZ - Логистическая система</title>
   <link rel="manifest" href="manifest.json">
+  
+  <!-- Стили для лучшего отображения в веб -->
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #F7FAFC;
+    }
+    .loading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    .loading h1 {
+      color: #2679DB;
+      font-size: 24px;
+      font-weight: bold;
+      margin-bottom: 16px;
+    }
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid #E2E8F0;
+      border-top: 4px solid #2679DB;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
 </head>
 <body>
+  <!-- Индикатор загрузки -->
+  <div class="loading" id="loading">
+    <h1>BARLAU.KZ</h1>
+    <div class="spinner"></div>
+  </div>
+  
+  <script>
+    // Скрываем индикатор загрузки когда Flutter загрузится
+    window.addEventListener('flutter-first-frame', function () {
+      const loading = document.getElementById('loading');
+      if (loading) {
+        loading.style.display = 'none';
+      }
+    });
+  </script>
+  
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

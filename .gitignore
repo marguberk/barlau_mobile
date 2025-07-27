@@ -5,9 +5,11 @@
 *.swp
 .DS_Store
 .atom/
+.build/
 .buildlog/
 .history
 .svn/
+.swiftpm/
 migrate_working_dir/
 
 # IntelliJ related
@@ -43,12 +45,10 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-# APK and AAB files
+# APK и AAB файлы - игнорировать (слишком большие для GitHub)
 *.apk
 *.aab
 
 # Build artifacts
 apk_for_testing/
 store_releases/
-barlau-debug.apk
-barlau-release.apk

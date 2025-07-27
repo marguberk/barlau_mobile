@@ -1,4 +1,4 @@
-package kz.barlau.barlau_flutter
+package kz.barlau.app
 
 import io.flutter.embedding.android.FlutterActivity
 
