@@ -118,3 +118,7 @@ echo "🍎 iOS иконки обновлены в ios/Runner/Assets.xcassets/App
 echo ""
 echo "🔄 Для применения изменений перезапустите приложение:"
 echo "   flutter clean && flutter pub get && flutter run" 
+ 
+ 
+ 
+ 

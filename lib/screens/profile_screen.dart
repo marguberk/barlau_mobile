@@ -447,45 +447,40 @@ class ProfileScreen extends StatelessWidget {
         return 'Менеджер';
       case 'TECH':
         return 'Технический специалист';
+      case 'DISPATCHER':
+        return 'Диспетчер';
       default:
         return role;
     }
   }
   
   Widget _buildProfileImage(User user) {
-    // Если есть фото профиля
-    if (user.profilePicture != null && user.profilePicture!.isNotEmpty) {
-      // Проверяем, это локальный файл или URL
-      if (user.profilePicture!.startsWith('http')) {
-        return Image.network(
-          user.profilePicture!,
-          width: 80,
-          height: 80,
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) {
-            return const Icon(
-              Icons.person,
-              size: 40,
-              color: Color(0xFF2679DB),
-            );
-          },
-        );
-      } else {
-        // Локальный файл
-        return Image.file(
-          File(user.profilePicture!),
-          width: 80,
-          height: 80,
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) {
-            return const Icon(
-              Icons.person,
-              size: 40,
-              color: Color(0xFF2679DB),
-            );
-          },
-        );
-      }
+    // Используем ту же логику, что и в карточках сотрудников
+    final photoUrl = _getPhotoUrl(user.profilePicture, user.id);
+    
+    print('📸 Профиль: ${user.firstName} ${user.lastName}');
+    print('📸 profilePicture: ${user.profilePicture}');
+    print('📸 photoUrl: $photoUrl');
+    
+    if (photoUrl != null) {
+      return Image.network(
+        photoUrl,
+        width: 80,
+        height: 80,
+        fit: BoxFit.cover,
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache',
+        },
+        errorBuilder: (context, error, stackTrace) {
+          print('Ошибка загрузки фото профиля: $error');
+          return const Icon(
+            Icons.person,
+            size: 40,
+            color: Color(0xFF2679DB),
+          );
+        },
+      );
     }
     
     // Дефолтная иконка
@@ -494,6 +489,22 @@ class ProfileScreen extends StatelessWidget {
       size: 40,
       color: Color(0xFF2679DB),
     );
+  }
+
+  String? _getPhotoUrl(dynamic photoPath, int userId) {
+    if (photoPath == null || photoPath.toString().isEmpty) {
+      return null;
+    }
+    
+    String photoStr = photoPath.toString();
+    
+    // Если уже полный URL, добавляем параметр для очистки кеша
+    if (photoStr.startsWith('http')) {
+      return '$photoStr?user_id=$userId&t=${DateTime.now().millisecondsSinceEpoch}';
+    }
+    
+    // Если это относительный путь, формируем полный URL с параметром кеша
+    return 'https://barlau.org$photoStr?user_id=$userId&t=${DateTime.now().millisecondsSinceEpoch}';
   }
 
   void _showLogoutDialog(BuildContext context, AuthProvider authProvider) {

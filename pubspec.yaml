@@ -71,10 +71,10 @@ dev_dependencies:
 flutter_icons:
   android: true
   ios: true
-  image_path: "assets/images/logo.png"
+  image_path: "assets/images/applogo.png"
   min_sdk_android: 21
   adaptive_icon_background: "#2679DB"
-  adaptive_icon_foreground: "assets/images/logo.png"
+  adaptive_icon_foreground: "assets/images/applogo.png"
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -117,15 +117,3 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
-  
-  # Custom fonts
-  fonts:
-    - family: SF Pro Display
-      fonts:
-        - asset: assets/fonts/SF-Pro-Display-Regular.otf
-        - asset: assets/fonts/SF-Pro-Display-Medium.otf
-          weight: 500
-        - asset: assets/fonts/SF-Pro-Display-SemiBold.otf
-          weight: 600
-        - asset: assets/fonts/SF-Pro-Display-Bold.otf
-          weight: 700

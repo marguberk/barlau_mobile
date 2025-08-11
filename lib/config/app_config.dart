@@ -2,34 +2,21 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 
 class AppConfig {
-  // 🎯 КОНФИГУРАЦИЯ СЕРВЕРА: ЛОКАЛЬНЫЙ ИЛИ ПРОДАКШН
-  // Измените эту переменную для переключения между серверами
-  static const bool _useProductionServer = false; // true = продакшн, false = локальный
+  // Переключаем на продакшн сервер
+  static const bool _useProductionServer = true;
   
   static String get baseApiUrl {
-    if (kDebugMode) {
-      print('🔧 AppConfig: Определяем baseApiUrl');
-      print('🔧 Platform.isIOS: ${!kIsWeb ? Platform.isIOS : "N/A"}');
-      print('🔧 kIsWeb: $kIsWeb');
-      print('🔧 Platform.isAndroid: ${!kIsWeb ? Platform.isAndroid : "N/A"}');
-    }
-    
     if (_useProductionServer) {
-      if (kDebugMode) print('🟢 AppConfig: Продакшн сервер -> barlau.org');
       return 'https://barlau.org/api';
     } else {
-      if (kDebugMode) print('🟢 AppConfig: Локальный сервер -> localhost:8000');
       return 'http://localhost:8000/api';
     }
   }
   
-  // Базовый URL для медиа файлов
-  static String get baseMediaUrl {
+  static String get baseUrl {
     if (_useProductionServer) {
-      if (kDebugMode) print('🟢 AppConfig: Медиа -> barlau.org');
       return 'https://barlau.org';
     } else {
-      if (kDebugMode) print('🟢 AppConfig: Медиа -> localhost:8000');
       return 'http://localhost:8000';
     }
   }

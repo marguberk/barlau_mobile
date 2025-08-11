@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../components/app_header.dart';
 import '../components/svg_icon.dart';
+import '../services/api_service.dart';
 import 'trip_details_screen.dart';
 
 class TripsScreen extends StatefulWidget {
@@ -20,94 +21,72 @@ class _TripsScreenState extends State<TripsScreen> with TickerProviderStateMixin
   String? _selectedDriver;
   String? _selectedVehicle;
   
-  // Демо данные заездов
-  final List<Map<String, dynamic>> _demoTrips = [
-    {
-      'id': 1,
-      'vehicle': {'number': '290 ATL 01', 'model': 'DAF XF 106'},
-      'driver': {'name': 'Юнус Алиев', 'phone': '+7 (777) 159 03 06'},
-      'status': 'ACTIVE',
-      'start_location': 'Алматы',
-      'end_location': 'Астана',
-      'cargo_type': 'Продукты питания',
-      'cargo_volume': 15.5,
-      'cargo_weight': 12000,
-      'trailer_number': 'П 125 ATL 01',
-      'border_crossing': 'Нур Жолы',
-      'start_date': '2025-01-07T08:00:00',
-      'estimated_arrival': '2025-01-07T20:00:00',
-      'progress': 0.6,
-    },
-    {
-      'id': 2,
-      'vehicle': {'number': '484 ATL 01', 'model': 'Volvo FH'},
-      'driver': {'name': 'Арман Вадиев', 'phone': '+7 (777) 123 45 67'},
-      'status': 'ACTIVE',
-      'start_location': 'Шымкент',
-      'end_location': 'Алматы',
-      'cargo_type': 'Строительные материалы',
-      'cargo_volume': 22.0,
-      'cargo_weight': 18000,
-      'trailer_number': 'П 347 ATL 01',
-      'border_crossing': 'Достык',
-      'start_date': '2025-01-07T06:30:00',
-      'estimated_arrival': '2025-01-07T14:30:00',
-      'progress': 0.8,
-    },
-    {
-      'id': 3,
-      'vehicle': {'number': '533 ATL 01', 'model': 'Mercedes Actros'},
-      'driver': {'name': 'Габит Ахметов', 'phone': '+7 (701) 234 56 78'},
-      'status': 'COMPLETED',
-      'start_location': 'Астана',
-      'end_location': 'Караганда',
-      'cargo_type': 'Электроника',
-      'cargo_volume': 8.5,
-      'cargo_weight': 5000,
-      'trailer_number': 'П 892 ATL 01',
-      'border_crossing': 'Хоргос',
-      'start_date': '2025-01-06T10:00:00',
-      'estimated_arrival': '2025-01-06T16:00:00',
-      'progress': 1.0,
-    },
-    {
-      'id': 4,
-      'vehicle': {'number': '290 ATL 02', 'model': 'DAF XF 106'},
-      'driver': {'name': 'Тест Водитель', 'phone': '+7 (700) 123 45 67'},
-      'status': 'PLANNED',
-      'start_location': 'Алматы',
-      'end_location': 'Тараз',
-      'cargo_type': 'Текстиль',
-      'cargo_volume': 12.0,
-      'cargo_weight': 8000,
-      'trailer_number': 'П 456 ATL 02',
-      'border_crossing': 'Кордай',
-      'start_date': '2025-01-08T09:00:00',
-      'estimated_arrival': '2025-01-08T15:00:00',
-      'progress': 0.0,
-    },
-  ];
-
-  // Список водителей для фильтра
-  final List<String> _drivers = [
-    'Юнус Алиев',
-    'Арман Вадиев',
-    'Габит Ахметов',
-    'Тест Водитель',
-  ];
-
-  // Список грузовиков для фильтра
-  final List<String> _vehicles = [
-    '290 ATL 01 (DAF XF 106)',
-    '484 ATL 01 (Volvo FH)',
-    '533 ATL 01 (Mercedes Actros)',
-    '290 ATL 02 (DAF XF 106)',
-  ];
+  // Реальные данные заездов
+  List<Map<String, dynamic>> _trips = [];
+  List<String> _drivers = [];
+  List<String> _vehicles = [];
+  bool _isLoading = true;
+  String? _error;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _loadTrips();
+  }
+
+  Future<void> _loadTrips() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final apiService = ApiService();
+      final result = await apiService.getTrips();
+      print('TRIPS API RAW RESULT:');
+      print(result);
+
+      if (result['success']) {
+        final tripsData = result['data'] as List;
+        print('TRIPS API DATA LIST:');
+        print(tripsData);
+        _trips = tripsData.cast<Map<String, dynamic>>();
+        
+        // Извлекаем уникальных водителей и грузовиков для фильтров
+        final driversSet = <String>{};
+        final vehiclesSet = <String>{};
+        
+        for (final trip in _trips) {
+          if (trip['driver_details'] != null) {
+            final driver = trip['driver_details'] as Map<String, dynamic>;
+            final driverName = '${driver['first_name'] ?? ''} ${driver['last_name'] ?? ''}'.trim();
+            if (driverName.isNotEmpty) {
+              driversSet.add(driverName);
+            }
+          }
+          
+          if (trip['vehicle_details'] != null) {
+            final vehicle = trip['vehicle_details'] as Map<String, dynamic>;
+            final vehicleInfo = '${vehicle['number'] ?? ''} (${vehicle['brand'] ?? ''} ${vehicle['model'] ?? ''})'.trim();
+            if (vehicleInfo.isNotEmpty) {
+              vehiclesSet.add(vehicleInfo);
+            }
+          }
+        }
+        
+        _drivers = driversSet.toList()..sort();
+        _vehicles = vehiclesSet.toList()..sort();
+      } else {
+        _error = result['error'] ?? 'Ошибка загрузки данных';
+      }
+    } catch (e) {
+      _error = 'Ошибка загрузки данных: $e';
+    }
+
+    setState(() {
+      _isLoading = false;
+    });
   }
 
   @override
@@ -234,50 +213,75 @@ class _TripsScreenState extends State<TripsScreen> with TickerProviderStateMixin
   }
 
   List<Map<String, dynamic>> _getFilteredTrips() {
-    List<Map<String, dynamic>> filtered = List.from(_demoTrips);
+    List<Map<String, dynamic>> filtered = List.from(_trips);
 
     // Фильтр по дате начала
     if (_selectedStartDate != null) {
       filtered = filtered.where((trip) {
-        final tripDate = DateTime.parse(trip['start_date']);
-        return tripDate.isAfter(_selectedStartDate!) || 
-               tripDate.isAtSameMomentAs(_selectedStartDate!);
+        final plannedStartDate = trip['planned_start_date'];
+        if (plannedStartDate != null) {
+          final tripDate = DateTime.parse(plannedStartDate);
+          return tripDate.isAfter(_selectedStartDate!) || 
+                 tripDate.isAtSameMomentAs(_selectedStartDate!);
+        }
+        return false;
       }).toList();
     }
 
     // Фильтр по дате окончания
     if (_selectedEndDate != null) {
       filtered = filtered.where((trip) {
-        final tripDate = DateTime.parse(trip['start_date']);
-        return tripDate.isBefore(_selectedEndDate!) || 
-               tripDate.isAtSameMomentAs(_selectedEndDate!);
+        final plannedStartDate = trip['planned_start_date'];
+        if (plannedStartDate != null) {
+          final tripDate = DateTime.parse(plannedStartDate);
+          return tripDate.isBefore(_selectedEndDate!) || 
+                 tripDate.isAtSameMomentAs(_selectedEndDate!);
+        }
+        return false;
       }).toList();
     }
 
     // Фильтр по водителю
     if (_selectedDriver != null) {
       filtered = filtered.where((trip) {
-        final driver = trip['driver'] as Map<String, dynamic>;
-        return driver['name'] == _selectedDriver;
+        final driverDetails = trip['driver_details'];
+        if (driverDetails != null) {
+          final driver = driverDetails as Map<String, dynamic>;
+          final driverName = '${driver['first_name'] ?? ''} ${driver['last_name'] ?? ''}'.trim();
+          return driverName == _selectedDriver;
+        }
+        return false;
       }).toList();
     }
 
     // Фильтр по грузовику
     if (_selectedVehicle != null) {
       filtered = filtered.where((trip) {
-        final vehicle = trip['vehicle'] as Map<String, dynamic>;
-        final vehicleInfo = '${vehicle['number']} (${vehicle['model']})';
-        return vehicleInfo == _selectedVehicle;
+        final vehicleDetails = trip['vehicle_details'];
+        if (vehicleDetails != null) {
+          final vehicle = vehicleDetails as Map<String, dynamic>;
+          final vehicleInfo = '${vehicle['number'] ?? ''} (${vehicle['brand'] ?? ''} ${vehicle['model'] ?? ''})'.trim();
+          return vehicleInfo == _selectedVehicle;
+        }
+        return false;
       }).toList();
     }
 
     return filtered;
   }
 
+  List<Map<String, dynamic>> _getActiveTrips() {
+    final active = _trips.where((trip) =>
+      trip['status'] == 'ACTIVE' || trip['status'] == 'PLANNED'
+    ).toList();
+    print('FLUTTER ACTIVE TRIPS IDS: ' + active.map((t) => t['id'].toString()).join(', '));
+    return active;
+  }
+
   Widget _buildCompactTripCard(Map<String, dynamic> trip) {
-    final vehicle = trip['vehicle'] as Map<String, dynamic>;
-    final driver = trip['driver'] as Map<String, dynamic>;
-    final status = trip['status'] as String;
+    final vehicleDetails = trip['vehicle_details'] as Map<String, dynamic>?;
+    final driverDetails = trip['driver_details'] as Map<String, dynamic>?;
+    final status = trip['status'] as String? ?? 'PLANNED';
     
     Color statusColor;
     switch (status) {
@@ -319,7 +323,7 @@ class _TripsScreenState extends State<TripsScreen> with TickerProviderStateMixin
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '${vehicle['number']} • ${driver['name']}',
+                    '${vehicleDetails?['number'] ?? 'N/A'} • ${driverDetails?['first_name'] ?? ''} ${driverDetails?['last_name'] ?? ''}'.trim(),
                           style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
@@ -328,7 +332,7 @@ class _TripsScreenState extends State<TripsScreen> with TickerProviderStateMixin
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '${trip['start_location']} → ${trip['end_location']}',
+                    '${trip['start_address'] ?? 'N/A'} → ${trip['end_address'] ?? 'N/A'}',
                     style: const TextStyle(
                       fontSize: 12,
                       color: Color(0xFF6B7280),
@@ -338,7 +342,7 @@ class _TripsScreenState extends State<TripsScreen> with TickerProviderStateMixin
               ),
             ),
                             Text(
-              DateFormat('dd.MM').format(DateTime.parse(trip['start_date'])),
+              DateFormat('dd.MM').format(DateTime.parse(trip['planned_start_date'] ?? DateTime.now().toIso8601String())),
               style: const TextStyle(
                                 fontSize: 12,
                 color: Color(0xFF6B7280),
@@ -402,7 +406,35 @@ class _TripsScreenState extends State<TripsScreen> with TickerProviderStateMixin
   }
 
   Widget _buildActiveTripsTab() {
-    final activeTrips = _demoTrips.where((trip) => trip['status'] == 'ACTIVE').toList();
+    final activeTrips = _getActiveTrips();
+    
+    if (_isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
+    
+    if (_error != null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, size: 48, color: Color(0xFF6B7280)),
+            const SizedBox(height: 16),
+            Text(
+              _error!,
+              style: const TextStyle(color: Color(0xFF6B7280)),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _loadTrips,
+              child: const Text('Повторить'),
+            ),
+          ],
+        ),
+      );
+    }
     
     if (activeTrips.isEmpty) {
       return Center(
@@ -446,11 +478,41 @@ class _TripsScreenState extends State<TripsScreen> with TickerProviderStateMixin
   }
 
   Widget _buildAllTripsTab() {
+    final allTrips = _getFilteredTrips();
+    
+    if (_isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
+    
+    if (_error != null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, size: 48, color: Color(0xFF6B7280)),
+            const SizedBox(height: 16),
+            Text(
+              _error!,
+              style: const TextStyle(color: Color(0xFF6B7280)),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _loadTrips,
+              child: const Text('Повторить'),
+            ),
+          ],
+        ),
+      );
+    }
+    
     return ListView.builder(
       padding: const EdgeInsets.all(16),
-      itemCount: _demoTrips.length,
+      itemCount: allTrips.length,
       itemBuilder: (context, index) {
-        return _buildTripCard(_demoTrips[index]);
+        return _buildTripCard(allTrips[index]);
       },
     );
   }
@@ -754,9 +816,9 @@ class _TripsScreenState extends State<TripsScreen> with TickerProviderStateMixin
   }
 
   Widget _buildTripCard(Map<String, dynamic> trip, {bool showProgress = false}) {
-    final vehicle = trip['vehicle'] as Map<String, dynamic>;
-    final driver = trip['driver'] as Map<String, dynamic>;
-    final status = trip['status'] as String;
+    final vehicleDetails = trip['vehicle_details'] as Map<String, dynamic>?;
+    final driverDetails = trip['driver_details'] as Map<String, dynamic>?;
+    final status = trip['status'] as String? ?? 'PLANNED';
     
     Color statusColor;
     Color statusBgColor;
@@ -814,7 +876,7 @@ class _TripsScreenState extends State<TripsScreen> with TickerProviderStateMixin
                 children: [
                   // Номер грузовика - крупно
                   Text(
-                    vehicle['number'],
+                    vehicleDetails?['number'] ?? 'N/A',
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
@@ -826,7 +888,7 @@ class _TripsScreenState extends State<TripsScreen> with TickerProviderStateMixin
                   
                   // Модель и водитель в одну строку
                               Text(
-                    '${vehicle['model']} • ${driver['name'].split(' ')[0]}',
+                    '${vehicleDetails?['brand'] ?? ''} ${vehicleDetails?['model'] ?? ''} • ${driverDetails?['first_name'] ?? ''}',
                     style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
@@ -838,7 +900,7 @@ class _TripsScreenState extends State<TripsScreen> with TickerProviderStateMixin
                   
                   // Маршрут
                               Text(
-                    '${trip['start_location']} → ${trip['end_location']}',
+                    '${trip['start_address'] ?? 'N/A'} → ${trip['end_address'] ?? 'N/A'}',
                     style: const TextStyle(
                                   fontSize: 14,
                       fontWeight: FontWeight.w600,
@@ -903,7 +965,7 @@ class _TripsScreenState extends State<TripsScreen> with TickerProviderStateMixin
                 bottom: 0,
                 right: 0,
                 child: Text(
-                  DateFormat('dd.MM.yyyy').format(DateTime.parse(trip['start_date'])),
+                  DateFormat('dd.MM.yyyy').format(DateTime.parse(trip['planned_start_date'] ?? DateTime.now().toIso8601String())),
                   style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
@@ -926,6 +988,4 @@ class _TripsScreenState extends State<TripsScreen> with TickerProviderStateMixin
       ),
     );
   }
-} 
- 
- 
+}

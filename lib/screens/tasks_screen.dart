@@ -4,8 +4,12 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../components/app_header.dart';
 import '../config/app_config.dart';
+import '../providers/auth_provider.dart';
+import '../services/api_service.dart';
 
 class TasksScreen extends StatefulWidget {
   const TasksScreen({super.key});
@@ -49,6 +53,21 @@ class _TasksScreenState extends State<TasksScreen> {
     });
     
     try {
+      // Получаем информацию о текущем пользователе
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final currentUser = authProvider.user;
+      final userRole = currentUser?.role ?? '';
+      final userId = currentUser?.id ?? 0;
+      
+      print('Загружаем задачи для пользователя: ${currentUser?.username} (ID: $userId, Роль: $userRole)');
+      
+      // Определяем, нужно ли фильтровать задачи по пользователю
+      final shouldFilterByUser = !['SUPERADMIN', 'ADMIN', 'DIRECTOR'].contains(userRole);
+      
+      // Получаем токен авторизации
+      final apiService = ApiService();
+      final token = await apiService.getToken();
+      
       // Пробуем разные endpoints - правильный путь для задач
       final urls = [
         '${AppConfig.baseApiUrl}/tasks/',
@@ -58,12 +77,21 @@ class _TasksScreenState extends State<TasksScreen> {
       for (final url in urls) {
         try {
           print('Пробуем URL: $url');
+          
+          final headers = {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          };
+          
+          // Добавляем токен авторизации, если он есть
+          if (token != null && token.isNotEmpty) {
+            headers['Authorization'] = 'Bearer $token';
+            print('Добавлен токен авторизации для запроса задач');
+          }
+          
           response = await http.get(
             Uri.parse(url),
-            headers: {
-              'Accept': 'application/json',
-              'Content-Type': 'application/json',
-            },
+            headers: headers,
           ).timeout(const Duration(seconds: 3));
           
           if (response.statusCode == 200) {
@@ -89,6 +117,32 @@ class _TasksScreenState extends State<TasksScreen> {
           tasks = List<Map<String, dynamic>>.from(data);
         }
         
+        // Фильтруем задачи по пользователю, если необходимо
+        if (shouldFilterByUser && userId > 0) {
+          print('🔍 Начинаем фильтрацию задач для пользователя ID: $userId');
+          print('🔍 Тип userId: ${userId.runtimeType}');
+          print('🔍 Всего задач до фильтрации: ${tasks.length}');
+          
+          tasks = tasks.where((task) {
+            final assignedUserId = task['assigned_to'] ?? task['assigned_user'] ?? task['assigned_user_id'];
+            final taskId = task['id'];
+            final taskTitle = task['title'];
+            
+            print('🔍 Задача ID: $taskId, Название: "$taskTitle"');
+            print('🔍   assigned_to: ${task['assigned_to']} (тип: ${task['assigned_to']?.runtimeType})');
+            print('🔍   assigned_user: ${task['assigned_user']} (тип: ${task['assigned_user']?.runtimeType})');
+            print('🔍   assigned_user_id: ${task['assigned_user_id']} (тип: ${task['assigned_user_id']?.runtimeType})');
+            print('🔍   Итоговый assignedUserId: $assignedUserId (тип: ${assignedUserId?.runtimeType})');
+            print('🔍   userId: $userId (тип: ${userId.runtimeType})');
+            print('🔍   Сравнение: $assignedUserId == $userId = ${assignedUserId == userId}');
+            
+            return assignedUserId == userId;
+          }).toList();
+          print('✅ Отфильтровано ${tasks.length} задач для пользователя ID: $userId');
+        } else {
+          print('Показываем все задачи (роль: $userRole)');
+        }
+        
         if (!mounted) return;
         setState(() {
           allTasks = tasks;
@@ -105,11 +159,21 @@ class _TasksScreenState extends State<TasksScreen> {
     } catch (e) {
       print('Ошибка загрузки задач: $e');
       if (!mounted) return;
+      
+      // Получаем информацию о текущем пользователе для фильтрации тестовых данных
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final currentUser = authProvider.user;
+      final userRole = currentUser?.role ?? '';
+      final userId = currentUser?.id ?? 0;
+      final shouldFilterByUser = !['SUPERADMIN', 'ADMIN', 'DIRECTOR'].contains(userRole);
+      
+      // Убираем тестовые данные полностью
+      
       setState(() {
         errorMessage = 'Ошибка загрузки задач: $e';
-        // Добавляем тестовые данные для демонстрации
-        allTasks = _getTestTasks();
-        filteredTasks = List.from(allTasks);
+        // Не показываем тестовые данные - только реальные данные с сервера
+        allTasks = [];
+        filteredTasks = [];
         _updateTaskCounts();
       });
     } finally {
@@ -119,99 +183,43 @@ class _TasksScreenState extends State<TasksScreen> {
     }
   }
 
-  List<Map<String, dynamic>> _getTestTasks() {
-    return [
-      {
-        'id': 1,
-        'title': 'Чек лист',
-        'description': 'Разработать чек лист по подготовке фуры к рейсу',
-        'status': 'NEW',
-        'priority': 'HIGH',
-        'due_date': '2024-06-16T00:00:00Z',
-        'created_at': '2024-06-10T00:00:00Z',
-        'assigned_user_details': {
-          'id': 1,
-          'first_name': 'Габит',
-          'full_name': 'Габит Ибрагимов',
-        },
-      },
-      {
-        'id': 2,
-        'title': 'Проверить чип',
-        'description': 'Оплатить приглашение на склад',
-        'status': 'NEW',
-        'priority': 'HIGH',
-        'due_date': '2024-06-02T00:00:00Z',
-        'created_at': '2024-05-28T00:00:00Z',
-        'assigned_user_details': {
-          'id': 1,
-          'first_name': 'Габит',
-          'full_name': 'Габит Ибрагимов',
-        },
-      },
-      {
-        'id': 3,
-        'title': 'Экспресс доставка в Нур-Султан',
-        'description': 'Срочная доставка груза',
-        'status': 'NEW',
-        'priority': 'HIGH',
-        'due_date': '2024-06-02T00:00:00Z',
-        'created_at': '2024-05-30T00:00:00Z',
-        'assigned_user_details': {
-          'id': 1,
-          'first_name': 'Габит',
-          'full_name': 'Габит Ибрагимов',
-        },
-      },
-      {
-        'id': 4,
-        'title': 'Транспортировка в Алматы',
-        'description': 'Доставка в Алматы',
-        'status': 'NEW',
-        'priority': 'MEDIUM',
-        'due_date': '2024-05-31T00:00:00Z',
-        'created_at': '2024-05-25T00:00:00Z',
-        'assigned_user_details': {
-          'id': 1,
-          'first_name': 'Габит',
-          'full_name': 'Габит Ибрагимов',
-        },
-      },
-      {
-        'id': 5,
-        'title': 'Техосмотр грузовика',
-        'description': 'Плановый техосмотр',
-        'status': 'COMPLETED',
-        'priority': 'MEDIUM',
-        'due_date': '2024-05-20T00:00:00Z',
-        'created_at': '2024-05-15T00:00:00Z',
-        'assigned_user_details': {
-          'id': 2,
-          'first_name': 'Асхат',
-          'full_name': 'Асхат Нурланов',
-        },
-      },
-    ];
-  }
+
 
   Future<void> _loadEmployees() async {
     try {
+      // Получаем токен авторизации
+      final apiService = ApiService();
+      final token = await apiService.getToken();
+      
       final urls = [
         '${AppConfig.baseApiUrl}/employees/',
+        '${AppConfig.baseApiUrl}/api/employees/',
+        'https://barlau.org/api/employees/',
       ];
       
       for (final url in urls) {
         try {
+          print('Пробуем загрузить сотрудников с: $url');
+          
+          final headers = {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          };
+          
+          // Добавляем токен авторизации, если он есть
+          if (token != null && token.isNotEmpty) {
+            headers['Authorization'] = 'Bearer $token';
+            print('Добавлен токен авторизации для запроса сотрудников');
+          }
+          
           final response = await http.get(
             Uri.parse(url),
-            headers: {
-              'Accept': 'application/json',
-              'Content-Type': 'application/json',
-            },
-          ).timeout(const Duration(seconds: 2));
+            headers: headers,
+          ).timeout(const Duration(seconds: 5));
           
           if (response.statusCode == 200) {
             final data = json.decode(response.body);
+            print('Ответ сервера сотрудников: ${response.body}');
             if (!mounted) return;
             setState(() {
               if (data is Map && data.containsKey('results')) {
@@ -221,13 +229,25 @@ class _TasksScreenState extends State<TasksScreen> {
               }
             });
             print('Загружено ${employees.length} сотрудников');
+            print('📋 Список сотрудников:');
+            for (final emp in employees) {
+              print('   ID: ${emp['id']}, Имя: ${emp['full_name']}, Username: ${emp['username']}');
+            }
             return;
+          } else {
+            print('Статус код для $url: ${response.statusCode}');
           }
         } catch (e) {
           print('Ошибка для URL $url: $e');
           continue;
         }
       }
+      
+      // Если не удалось загрузить с сервера, оставляем пустой список
+      print('Не удалось загрузить сотрудников с сервера');
+      setState(() {
+        employees = [];
+      });
     } catch (e) {
       print('Ошибка загрузки сотрудников: $e');
     }
@@ -235,18 +255,30 @@ class _TasksScreenState extends State<TasksScreen> {
 
   Future<void> _loadVehicles() async {
     try {
+      // Получаем токен авторизации
+      final apiService = ApiService();
+      final token = await apiService.getToken();
+      
       final urls = [
         '${AppConfig.baseApiUrl}/vehicles/',
       ];
       
       for (final url in urls) {
         try {
+          final headers = {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          };
+          
+          // Добавляем токен авторизации, если он есть
+          if (token != null && token.isNotEmpty) {
+            headers['Authorization'] = 'Bearer $token';
+            print('Добавлен токен авторизации для запроса грузовиков');
+          }
+          
           final response = await http.get(
             Uri.parse(url),
-            headers: {
-              'Accept': 'application/json',
-              'Content-Type': 'application/json',
-            },
+            headers: headers,
           ).timeout(const Duration(seconds: 2));
           
           if (response.statusCode == 200) {
@@ -300,7 +332,7 @@ class _TasksScreenState extends State<TasksScreen> {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'Работаем с тестовыми данными',
+                    'Ошибка загрузки данных',
                     style: TextStyle(
     fontFamily: 'SF Pro Display',
                       fontSize: 18,
@@ -310,7 +342,7 @@ class _TasksScreenState extends State<TasksScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Сервер недоступен, показываем демо',
+                    'Не удалось загрузить задачи с сервера',
                     style: TextStyle(
     fontFamily: 'SF Pro Display',
                       fontSize: 14,
@@ -327,21 +359,29 @@ class _TasksScreenState extends State<TasksScreen> {
                     child: const Text('Попробовать снова'),
                   ),
                   const SizedBox(height: 32),
-                  // Показываем задачи даже при ошибке
-                  Expanded(
-                    child: _buildTasksList(),
+                  // Не показываем задачи при ошибке
+                  const Expanded(
+                    child: Center(
+                      child: Text(
+                        'Нет данных для отображения',
+                        style: TextStyle(
+                          color: Colors.grey,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
                   ),
                 ],
               ),
             )
           : _buildTasksList(),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: _canCreateTasks() ? FloatingActionButton(
         onPressed: () => _showCreateTaskModal(),
         backgroundColor: const Color(0xFF2679DB),
         foregroundColor: Colors.white,
         elevation: 4,
         child: const Icon(Icons.add, size: 24),
-      ),
+      ) : null,
     );
   }
 
@@ -350,39 +390,42 @@ class _TasksScreenState extends State<TasksScreen> {
       children: [
         // Контент задач
         Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              children: [
-                // К выполнению
-                _buildTaskGroup(
-                  'К выполнению',
-                  todoCount,
-                  const Color(0xFF64748B),
-                  Icons.radio_button_unchecked,
-                  filteredTasks.where((task) => task['status'] == 'NEW').toList(),
-                ),
-                const SizedBox(height: 24),
-                
-                // В работе
-                _buildTaskGroup(
-                  'В работе',
-                  progressCount,
-                  const Color(0xFFF59E0B),
-                  Icons.schedule,
-                  filteredTasks.where((task) => task['status'] == 'IN_PROGRESS').toList(),
-                ),
-                const SizedBox(height: 24),
-                
-                // Выполнено
-                _buildTaskGroup(
-                  'Выполнено',
-                  doneCount,
-                  const Color(0xFF10B981),
-                  Icons.check_circle_outline,
-                  filteredTasks.where((task) => task['status'] == 'COMPLETED').toList(),
-                ),
-              ],
+          child: RefreshIndicator(
+            onRefresh: _loadTasks,
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                children: [
+                  // К выполнению
+                  _buildTaskGroup(
+                    'К выполнению',
+                    todoCount,
+                    const Color(0xFF64748B),
+                    Icons.radio_button_unchecked,
+                    filteredTasks.where((task) => task['status'] == 'NEW').toList(),
+                  ),
+                  const SizedBox(height: 24),
+                  
+                  // В работе
+                  _buildTaskGroup(
+                    'В работе',
+                    progressCount,
+                    const Color(0xFFF59E0B),
+                    Icons.schedule,
+                    filteredTasks.where((task) => task['status'] == 'IN_PROGRESS').toList(),
+                  ),
+                  const SizedBox(height: 24),
+                  
+                  // Выполнено
+                  _buildTaskGroup(
+                    'Выполнено',
+                    doneCount,
+                    const Color(0xFF10B981),
+                    Icons.check_circle_outline,
+                    filteredTasks.where((task) => task['status'] == 'COMPLETED').toList(),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -775,6 +818,16 @@ class _TasksScreenState extends State<TasksScreen> {
   String _getFirstLetter(String? name) {
     if (name == null || name.isEmpty) return 'U';
     return name[0].toUpperCase();
+  }
+
+  bool _canCreateTasks() {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final userRole = authProvider.user?.role ?? '';
+    
+    // Только админы, директор и диспетчер могут создавать задачи
+    final canCreate = ['SUPERADMIN', 'ADMIN', 'DIRECTOR', 'DISPATCHER'].contains(userRole);
+    print('Права на создание задач для роли $userRole: $canCreate');
+    return canCreate;
   }
 }
 
@@ -1237,6 +1290,10 @@ class _CreateTaskModalState extends State<CreateTaskModal> {
   Widget build(BuildContext context) {
     return Container(
       height: MediaQuery.of(context).size.height * 0.9,
+      width: MediaQuery.of(context).size.width,
+      constraints: BoxConstraints(
+        maxWidth: MediaQuery.of(context).size.width,
+      ),
       decoration: const BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -1255,7 +1312,7 @@ class _CreateTaskModalState extends State<CreateTaskModal> {
                   child: Text(
                     'Новая задача',
                     style: TextStyle(
-    fontFamily: 'SF Pro Display',
+                      fontFamily: 'SF Pro Display',
                       fontSize: 20,
                       fontWeight: FontWeight.w600,
                       color: Color(0xFF111827),
@@ -1333,9 +1390,9 @@ class _CreateTaskModalState extends State<CreateTaskModal> {
                               contentPadding: const EdgeInsets.all(16),
                             ),
                             items: const [
-                              DropdownMenuItem(value: 'LOW', child: Text('Низкий приоритет')),
-                              DropdownMenuItem(value: 'MEDIUM', child: Text('Средний приоритет')),
-                              DropdownMenuItem(value: 'HIGH', child: Text('Высокий приоритет')),
+                              DropdownMenuItem(value: 'LOW', child: Text('Низкий')),
+                              DropdownMenuItem(value: 'MEDIUM', child: Text('Средний')),
+                              DropdownMenuItem(value: 'HIGH', child: Text('Высокий')),
                             ],
                             onChanged: (value) => setState(() => _priority = value!),
                           ),
@@ -1355,11 +1412,12 @@ class _CreateTaskModalState extends State<CreateTaskModal> {
                                   ? DateFormat('dd.MM.yyyy').format(_dueDate!)
                                   : 'Выберите дату',
                                 style: TextStyle(
-    fontFamily: 'SF Pro Display',
+                                  fontFamily: 'SF Pro Display',
                                   color: _dueDate != null 
                                     ? const Color(0xFF111827)
                                     : const Color(0xFF6B7280),
                                 ),
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                           ),
@@ -1371,6 +1429,7 @@ class _CreateTaskModalState extends State<CreateTaskModal> {
                     // Исполнитель
                     DropdownButtonFormField<int>(
                       value: _assignedUserId,
+                      isExpanded: true,
                       decoration: InputDecoration(
                         labelText: 'Основной исполнитель',
                         filled: true,
@@ -1388,16 +1447,23 @@ class _CreateTaskModalState extends State<CreateTaskModal> {
                         ),
                         ...widget.employees.map((employee) => DropdownMenuItem<int>(
                           value: employee['id'],
-                          child: Text(employee['full_name'] ?? employee['username'] ?? 'Сотрудник'),
+                          child: Text(
+                            employee['full_name'] ?? employee['username'] ?? 'Сотрудник',
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         )),
                       ],
-                      onChanged: (value) => setState(() => _assignedUserId = value),
+                      onChanged: (value) {
+                        print('🎯 Выбран исполнитель ID: $value');
+                        setState(() => _assignedUserId = value);
+                      },
                     ),
                     const SizedBox(height: 16),
                     
                     // Транспорт (опционально)
                     DropdownButtonFormField<int>(
                       value: _vehicleId,
+                      isExpanded: true,
                       decoration: InputDecoration(
                         labelText: 'Транспорт (опционально)',
                         filled: true,
@@ -1415,7 +1481,10 @@ class _CreateTaskModalState extends State<CreateTaskModal> {
                         ),
                         ...widget.vehicles.map((vehicle) => DropdownMenuItem<int>(
                           value: vehicle['id'],
-                          child: Text('${vehicle['brand']} ${vehicle['model']} (${vehicle['number']})'),
+                          child: Text(
+                            '${vehicle['brand']} ${vehicle['model']} (${vehicle['number']})',
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         )),
                       ],
                       onChanged: (value) => setState(() => _vehicleId = value),
@@ -1512,18 +1581,36 @@ class _CreateTaskModalState extends State<CreateTaskModal> {
         if (_vehicleId != null) 'vehicle': _vehicleId,
       };
 
+      print('📝 Создаем задачу с данными: $taskData');
+      print('📝 assigned_to: $_assignedUserId');
+
+      // Получаем токен авторизации
+      final prefs = await SharedPreferences.getInstance();
+      final authToken = prefs.getString('auth_token');
+      
+      print('📝 Токен авторизации: ${authToken != null ? "есть" : "нет"}');
+      
       final response = await http.post(
-        Uri.parse('${AppConfig.baseApiUrl}/api/tasks/'),
+        Uri.parse('${AppConfig.baseApiUrl}/tasks/'),
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
+          if (authToken != null) 'Authorization': 'Bearer $authToken',
         },
         body: json.encode(taskData),
       );
 
+      print('📝 Ответ сервера: ${response.statusCode}');
+      print('📝 Тело ответа: ${response.body}');
+
       if (response.statusCode == 201) {
+        print('✅ Задача успешно создана, обновляем список задач...');
         Navigator.pop(context);
+        
+        // Принудительно обновляем данные
+        await Future.delayed(const Duration(milliseconds: 500));
         widget.onTaskCreated();
+        
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Задача успешно создана')),
         );
@@ -1539,5 +1626,4 @@ class _CreateTaskModalState extends State<CreateTaskModal> {
     }
   }
 }
- 
  

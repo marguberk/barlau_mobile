@@ -67,29 +67,32 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   void _buildScreensAndNavigation() {
+    // Определяем, какие страницы доступны для текущей роли
+    final canAccessEmployees = ['SUPERADMIN', 'ADMIN', 'DIRECTOR', 'HR_MANAGER', 'ACCOUNTANT'].contains(userRole);
+    final canAccessTrips = !['ACCOUNTANT'].contains(userRole);
+    final canAccessVehicles = !['ACCOUNTANT'].contains(userRole);
+    
+    // Базовые экраны для всех ролей
     _screens = [
-      ExpensesScreen(), // Заменили DashboardScreen() на ExpensesScreen()
+      ExpensesScreen(),
       const TasksScreen(),
-      const TripsScreen(),
-      const VehiclesScreen(),
-      const EmployeesScreen(),
     ];
 
     _navItems = [
       BottomNavigationBarItem(
         icon: SvgIcon(
-          assetName: 'receipt.svg', // Заменили home.svg на receipt.svg
+          assetName: 'receipt.svg',
           width: 20,
           height: 20,
           color: const Color(0xFF9CA3AF),
         ),
         activeIcon: SvgIcon(
-          assetName: 'receipt.svg', // Заменили home.svg на receipt.svg
+          assetName: 'receipt.svg',
           width: 20,
           height: 20,
           color: const Color(0xFF2679DB),
         ),
-        label: 'Расходы', // Заменили 'Главная' на 'Расходы'
+        label: 'Расходы',
       ),
       BottomNavigationBarItem(
         icon: SvgIcon(
@@ -106,56 +109,79 @@ class _MainScreenState extends State<MainScreen> {
         ),
         label: 'Задачи',
       ),
-      BottomNavigationBarItem(
-        icon: SvgIcon(
-          assetName: 'location.svg',
-          width: 20,
-          height: 20,
-          color: const Color(0xFF9CA3AF),
-        ),
-        activeIcon: SvgIcon(
-          assetName: 'location.svg',
-          width: 20,
-          height: 20,
-          color: const Color(0xFF2679DB),
-        ),
-        label: 'Заезды',
-      ),
-      BottomNavigationBarItem(
-        icon: SvgIcon(
-          assetName: 'truck.svg',
-          width: 20,
-          height: 20,
-          color: const Color(0xFF9CA3AF),
-        ),
-        activeIcon: SvgIcon(
-          assetName: 'truck.svg',
-          width: 20,
-          height: 20,
-          color: const Color(0xFF2679DB),
-        ),
-        label: 'Грузовики',
-      ),
-      BottomNavigationBarItem(
-        icon: SvgIcon(
-          assetName: 'employee.svg',
-          width: 20,
-          height: 20,
-          color: const Color(0xFF9CA3AF),
-        ),
-        activeIcon: SvgIcon(
-          assetName: 'employee.svg',
-          width: 20,
-          height: 20,
-          color: const Color(0xFF2679DB),
-        ),
-        label: 'Сотрудники',
-      ),
     ];
 
-    // Расходы теперь заменили главную страницу, поэтому дополнительная логика не нужна
+    // Добавляем страницу заездов только для разрешенных ролей
+    if (canAccessTrips) {
+      _screens.add(const TripsScreen());
+      _navItems.add(
+        BottomNavigationBarItem(
+          icon: SvgIcon(
+            assetName: 'location.svg',
+            width: 20,
+            height: 20,
+            color: const Color(0xFF9CA3AF),
+          ),
+          activeIcon: SvgIcon(
+            assetName: 'location.svg',
+            width: 20,
+            height: 20,
+            color: const Color(0xFF2679DB),
+          ),
+          label: 'Заезды',
+        ),
+      );
+    }
+
+    // Добавляем страницу грузовиков только для разрешенных ролей
+    if (canAccessVehicles) {
+      _screens.add(const VehiclesScreen());
+      _navItems.add(
+        BottomNavigationBarItem(
+          icon: SvgIcon(
+            assetName: 'truck.svg',
+            width: 20,
+            height: 20,
+            color: const Color(0xFF9CA3AF),
+          ),
+          activeIcon: SvgIcon(
+            assetName: 'truck.svg',
+            width: 20,
+            height: 20,
+            color: const Color(0xFF2679DB),
+          ),
+          label: 'Грузовики',
+        ),
+      );
+    }
+
+    // Добавляем страницу сотрудников только для разрешенных ролей
+    if (canAccessEmployees) {
+      _screens.add(const EmployeesScreen());
+      _navItems.add(
+        BottomNavigationBarItem(
+          icon: SvgIcon(
+            assetName: 'employee.svg',
+            width: 20,
+            height: 20,
+            color: const Color(0xFF9CA3AF),
+          ),
+          activeIcon: SvgIcon(
+            assetName: 'employee.svg',
+            width: 20,
+            height: 20,
+            color: const Color(0xFF2679DB),
+          ),
+          label: 'Сотрудники',
+        ),
+      );
+    }
+
     print('Total screens: ${_screens.length}');
     print('Total nav items: ${_navItems.length}');
+    print('Can access employees: $canAccessEmployees');
+    print('Can access trips: $canAccessTrips');
+    print('Can access vehicles: $canAccessVehicles');
   }
 
   @override

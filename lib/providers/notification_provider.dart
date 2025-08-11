@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../models/notification.dart';
+import '../services/safe_api_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class NotificationProvider with ChangeNotifier {
   List<NotificationModel> _notifications = [];
@@ -43,11 +45,24 @@ class NotificationProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      // Загружаем уведомления с сервера
+      // Получаем валидный токен
+      String? token = await SafeApiService.getValidToken();
+      
+      if (token == null) {
+        print('NotificationProvider: Токен не найден, используем демо данные');
+        _loadDemoNotifications();
+        _error = 'Токен авторизации не найден. Показаны демо данные.';
+        _isLoading = false;
+        notifyListeners();
+        return;
+      }
+
+      // Загружаем уведомления с сервера с авторизацией
       final response = await http.get(
-        Uri.parse('http://localhost:8000/api/notifications/'),
+        Uri.parse('https://barlau.org/api/notifications/'),
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
         },
       );
 
@@ -89,54 +104,140 @@ class NotificationProvider with ChangeNotifier {
   }
 
   // Демо данные для тестирования
-  void _loadDemoNotifications() {
-    _notifications = [
+  void _loadDemoNotifications() async {
+    // Получаем информацию о текущем пользователе
+    final prefs = await SharedPreferences.getInstance();
+    final userRole = prefs.getString('user_role') ?? '';
+    final userName = prefs.getString('user_name') ?? '';
+    
+    print('NotificationProvider: Загружаем демо уведомления для роли: $userRole');
+    
+    List<NotificationModel> demoNotifications = [];
+    
+    // Общие уведомления для всех
+    demoNotifications.add(
       NotificationModel(
         id: 'demo-1',
-        title: 'Новая задача',
-        message: 'Вам назначена задача "Проверка техосмотра"',
-        type: 'TASK',
-        priority: 'HIGH',
-        isRead: false,
-        createdAt: DateTime.now().subtract(const Duration(minutes: 5)),
-      ),
-      NotificationModel(
-        id: 'demo-2',
-        title: 'Крупный расход',
-        message: 'Добавлен расход: Ремонт на сумму 150000 тг',
-        type: 'EXPENSE',
-        priority: 'HIGH',
-        isRead: false,
-        createdAt: DateTime.now().subtract(const Duration(hours: 1)),
-      ),
-      NotificationModel(
-        id: 'demo-3',
-        title: 'Истек срок документа!',
-        message: 'СРОЧНО! У VOLVO FH16 (A123BC01) истек срок: Техпаспорт',
-        type: 'DOCUMENT',
-        priority: 'URGENT',
-        isRead: false,
-        createdAt: DateTime.now().subtract(const Duration(hours: 2)),
-      ),
-      NotificationModel(
-        id: 'demo-4',
-        title: 'Новая поездка',
-        message: 'Создана поездка "Алматы - Астана"',
-        type: 'TRIP',
+        title: 'Добро пожаловать!',
+        message: 'Добро пожаловать в систему BARLAU.KZ',
+        type: 'SYSTEM',
         priority: 'NORMAL',
-        isRead: true,
-        createdAt: DateTime.now().subtract(const Duration(days: 1)),
+        isRead: false,
+        createdAt: DateTime.now().subtract(const Duration(minutes: 10)),
       ),
-      NotificationModel(
-        id: 'demo-5',
-        title: 'Добавлен новый транспорт',
-        message: 'В систему добавлен транспорт: MAN TGX (B456CD02)',
-        type: 'VEHICLE',
-        priority: 'LOW',
-        isRead: true,
-        createdAt: DateTime.now().subtract(const Duration(days: 2)),
-      ),
-    ];
+    );
+    
+    // Персональные уведомления в зависимости от роли
+    switch (userRole) {
+      case 'DRIVER':
+        demoNotifications.addAll([
+          NotificationModel(
+            id: 'demo-2',
+            title: 'Новая поездка',
+            message: 'Вам назначена поездка "Алматы - Астана" на завтра',
+            type: 'TRIP',
+            priority: 'HIGH',
+            isRead: false,
+            createdAt: DateTime.now().subtract(const Duration(minutes: 30)),
+          ),
+          NotificationModel(
+            id: 'demo-3',
+            title: 'Техосмотр',
+            message: 'Напоминание: техосмотр грузовика через 3 дня',
+            type: 'MAINTENANCE',
+            priority: 'HIGH',
+            isRead: false,
+            createdAt: DateTime.now().subtract(const Duration(hours: 1)),
+          ),
+        ]);
+        break;
+        
+      case 'ACCOUNTANT':
+        demoNotifications.addAll([
+          NotificationModel(
+            id: 'demo-2',
+            title: 'Новый расход',
+            message: 'Добавлен расход: Ремонт грузовика на сумму 150000 тг',
+            type: 'EXPENSE',
+            priority: 'HIGH',
+            isRead: false,
+            createdAt: DateTime.now().subtract(const Duration(minutes: 15)),
+          ),
+          NotificationModel(
+            id: 'demo-3',
+            title: 'Отчет готов',
+            message: 'Финансовый отчет за месяц готов к проверке',
+            type: 'REPORT',
+            priority: 'NORMAL',
+            isRead: false,
+            createdAt: DateTime.now().subtract(const Duration(hours: 2)),
+          ),
+        ]);
+        break;
+        
+      case 'DIRECTOR':
+        demoNotifications.addAll([
+          NotificationModel(
+            id: 'demo-2',
+            title: 'Важная задача',
+            message: 'Требуется ваше решение по крупному контракту',
+            type: 'TASK',
+            priority: 'URGENT',
+            isRead: false,
+            createdAt: DateTime.now().subtract(const Duration(minutes: 5)),
+          ),
+          NotificationModel(
+            id: 'demo-3',
+            title: 'Финансовый отчет',
+            message: 'Ежемесячный финансовый отчет готов к рассмотрению',
+            type: 'REPORT',
+            priority: 'HIGH',
+            isRead: false,
+            createdAt: DateTime.now().subtract(const Duration(hours: 1)),
+          ),
+        ]);
+        break;
+        
+      case 'ADMIN':
+      case 'SUPERADMIN':
+        demoNotifications.addAll([
+          NotificationModel(
+            id: 'demo-2',
+            title: 'Новый пользователь',
+            message: 'Зарегистрирован новый водитель Арман Вадиев',
+            type: 'USER',
+            priority: 'NORMAL',
+            isRead: false,
+            createdAt: DateTime.now().subtract(const Duration(minutes: 20)),
+          ),
+          NotificationModel(
+            id: 'demo-3',
+            title: 'Системное уведомление',
+            message: 'Обновление системы завершено успешно',
+            type: 'SYSTEM',
+            priority: 'LOW',
+            isRead: false,
+            createdAt: DateTime.now().subtract(const Duration(hours: 3)),
+          ),
+        ]);
+        break;
+        
+      default:
+        // Для остальных ролей
+        demoNotifications.add(
+          NotificationModel(
+            id: 'demo-2',
+            title: 'Новая задача',
+            message: 'Вам назначена задача "Проверка документов"',
+            type: 'TASK',
+            priority: 'NORMAL',
+            isRead: false,
+            createdAt: DateTime.now().subtract(const Duration(minutes: 45)),
+          ),
+        );
+    }
+    
+    _notifications = demoNotifications;
   }
 
   Future<void> markAsRead(String notificationId) async {

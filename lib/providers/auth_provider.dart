@@ -152,8 +152,16 @@ class AuthProvider with ChangeNotifier {
         _error = null;
         print('AuthProvider: Авторизация успешна, устанавливаем _isAuthenticated = true');
         _isLoading = false;
+        print('AuthProvider: Вызываем notifyListeners() после успешной авторизации');
         notifyListeners();
         print('AuthProvider: notifyListeners() вызван после успешной авторизации');
+        
+        // Дополнительно вызываем notifyListeners еще раз через небольшую задержку
+        Future.delayed(const Duration(milliseconds: 100), () {
+          print('AuthProvider: Дополнительный вызов notifyListeners()');
+          notifyListeners();
+        });
+        
         return true;
       } else {
         print('AuthProvider: Авторизация неуспешна: ${result['error']}');

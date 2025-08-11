@@ -31,7 +31,7 @@ class User {
       phone: json['phone'] ?? '',
       role: json['role'] ?? 'user',
       isActive: json['is_active'] ?? true,
-      profilePicture: json['profile_picture'],
+      profilePicture: json['photo'] ?? json['profile_picture'],
     );
   }
 

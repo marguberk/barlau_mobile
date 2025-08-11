@@ -9,6 +9,7 @@ import '../components/app_header.dart';
 import 'profile_screen.dart';
 import '../config/app_config.dart';
 import '../services/api_service.dart';
+import '../services/safe_api_service.dart';
 import 'package:flutter/foundation.dart';
 
 class ExpensesScreen extends StatefulWidget {
@@ -25,9 +26,11 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
   bool isLoading = false;
   String? errorMessage;
   
-  // Сотрудники для фильтрации
+    // Сотрудники для фильтрации
   List<Map<String, dynamic>> employees = [];
   int? selectedEmployeeId;
+  
+
   
   // Фильтры по датам
   DateTime? startDate;
@@ -85,9 +88,14 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
     try {
       print('ExpensesScreen: Загружаем расходы с API...');
       
-      // Получаем токен авторизации
-      final prefs = await SharedPreferences.getInstance();
-      final authToken = prefs.getString('auth_token');
+      // Получаем валидный токен с принудительным обновлением
+      String? authToken = await SafeApiService.getValidToken();
+      
+      // Если токен не получен, пытаемся принудительно обновить
+      if (authToken == null) {
+        print('ExpensesScreen: Токен не получен, пытаемся принудительно обновить...');
+        authToken = await SafeApiService.forceRefreshToken();
+      }
       
       print('ExpensesScreen: Токен авторизации для загрузки: ${authToken != null ? 'есть' : 'нет'}');
       
@@ -181,6 +189,8 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
       print('ExpensesScreen: Ошибка загрузки сотрудников: $e');
     }
   }
+
+
 
   // Демо данные для случая ошибки API
   List<Map<String, dynamic>> _getDemoExpenses() {
@@ -332,7 +342,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                     ),
             ),
                 ),
-        ),
+              ),
               const SizedBox(height: 16),
               
               // Кнопки
@@ -421,9 +431,14 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
     try {
       print('ExpensesScreen: Создаем расход: $title, $amount, $date');
       
-      // Получаем токен авторизации
-      final prefs = await SharedPreferences.getInstance();
-      final authToken = prefs.getString('auth_token');
+      // Получаем валидный токен с принудительным обновлением
+      String? authToken = await SafeApiService.getValidToken();
+      
+      // Если токен не получен, пытаемся принудительно обновить
+      if (authToken == null) {
+        print('ExpensesScreen: Токен не получен, пытаемся принудительно обновить...');
+        authToken = await SafeApiService.forceRefreshToken();
+      }
       
       print('ExpensesScreen: Токен авторизации: ${authToken != null ? 'есть' : 'нет'}');
       
@@ -443,12 +458,11 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
         Uri.parse('${AppConfig.baseApiUrl}/expenses/'),
         headers: headers,
         body: json.encode({
-          'title': title,
           'amount': amount,
-          'date': date,
           'category': 'OTHER', // Добавляем обязательное поле
           'description': title, // Используем title как описание
-          'created_by': currentUserId,
+          'date': date,
+          'created_by': currentUserId ?? 22, // Добавляем ID пользователя
         }),
       );
       
@@ -516,14 +530,16 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
   }
 
   String _formatTime(String? dateStr) {
-    if (dateStr == null) return '';
+    if (dateStr == null || dateStr.isEmpty) {
+      return '--:--';
+    }
     try {
       final date = DateTime.parse(dateStr);
       // Конвертируем в UTC+5 (Алматы)
       final utc5Date = date.toUtc().add(const Duration(hours: 5));
       return DateFormat('HH:mm').format(utc5Date);
     } catch (e) {
-      return '';
+      return '--:--';
     }
   }
 
@@ -1057,17 +1073,19 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                     ],
                   ),
                   const SizedBox(height: 6),
-                    Row(
-                      children: [
-                        Text(
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // Время в левом нижнем углу
+                      Text(
                         _formatTime(createdAt),
-                          style: const TextStyle(
+                        style: const TextStyle(
                           color: Color(0xFF9CA3AF),
-                            fontSize: 12,
+                          fontSize: 12,
                         ),
                       ),
-                      if (canViewAllExpenses && employeeName.isNotEmpty) ...[
-                        const SizedBox(width: 12),
+                      // Автор в правом нижнем углу
+                      if (canViewAllExpenses && employeeName.isNotEmpty)
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
@@ -1078,13 +1096,12 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                             employeeName,
                             style: const TextStyle(
                               fontSize: 11,
-                            color: Color(0xFF6B7280),
+                              color: Color(0xFF6B7280),
+                            ),
                           ),
                         ),
-                    ),
-                  ],
-                ],
-              ),
+                    ],
+                  ),
                 ],
               ),
             ),

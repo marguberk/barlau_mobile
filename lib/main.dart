@@ -37,8 +37,7 @@ void main() async {
   print('🔧 Platform.isIOS: ${!kIsWeb ? Platform.isIOS : 'N/A'}');
   print('🔧 Platform.isAndroid: ${!kIsWeb ? Platform.isAndroid : 'N/A'}');
   print('🔧 baseApiUrl: ${AppConfig.baseApiUrl}');
-  print('🔧 baseMediaUrl: ${AppConfig.baseMediaUrl}');
-  print('🔧 configInfo: ${AppConfig.configInfo}');
+  print('🔧 baseUrl: ${AppConfig.baseUrl}');
   print('🔧 ================================');
   
   try {
@@ -133,7 +132,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
         print('🟢 AuthWrapper Consumer build - isAuthenticated: ${auth.isAuthenticated}, isLoading: ${auth.isLoading}');
         
         if (auth.isLoading) {
-          print('🟡 Показываем загрузочный экран');
+          print('🟡 Показываем загрузочный экран - isLoading: ${auth.isLoading}');
           return const Scaffold(
             body: Center(
               child: Column(

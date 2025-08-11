@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:typed_data';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -98,83 +97,85 @@ class SafeApiService {
   static Future<Map<String, dynamic>> safeLogin(String username, String password) async {
     try {
       print('SafeApiService: Попытка входа для $username');
+      print('SafeApiService: URL авторизации: ${AppConfig.baseApiUrl}/v1/auth/token/');
       
-      // Пробуем реальную авторизацию через JWT endpoint
-      print('SafeApiService: Отправляем запрос к /v1/auth/token/');
       final result = await safeRequest('/v1/auth/token/', 
         method: 'POST',
         body: {
           'username': username,
           'password': password,
-        }
+        },
       );
+      
+      print('SafeApiService: Результат авторизации: ${result['success']}');
+      print('SafeApiService: Статус код: ${result['statusCode']}');
+      if (result['data'] != null) {
+        print('SafeApiService: Данные ответа: ${result['data']}');
+      }
       
       if (result['success'] && result['data'] != null) {
         print('SafeApiService: Успешная авторизация через API');
         
-        // Сохраняем реальный токен из ответа API
+        final tokenData = result['data'];
+        final accessToken = tokenData['access'];
+        final refreshToken = tokenData['refresh'];
+        
+        print('SafeApiService: Access token получен: ${accessToken != null ? 'да' : 'нет'}');
+        print('SafeApiService: Refresh token получен: ${refreshToken != null ? 'да' : 'нет'}');
+        
+        if (accessToken != null) {
+          // Сохраняем токены
           final prefs = await SharedPreferences.getInstance();
-        final token = result['data']['access'] ?? result['data']['token'];
-        if (token != null) {
-          await prefs.setString('auth_token', token);
-          print('SafeApiService: Реальный токен сохранен: ${token.substring(0, 20)}...');
-        }
-        
-        // Получаем данные пользователя
-        print('SafeApiService: Получаем данные пользователя...');
-        final userResult = await safeRequest('/v1/users/me/', headers: {
-          'Authorization': 'Bearer $token',
-        });
-        
-        if (userResult['success'] && userResult['data'] != null) {
-          final userData = userResult['data'];
-          final userRole = userData['role'] ?? 'DRIVER';
+          await prefs.setString('auth_token', accessToken);
+          await prefs.setString('refresh_token', refreshToken);
           
-          // Сохраняем данные пользователя
-          await prefs.setString('user_role', userRole);
-          await prefs.setString('user_name', username);
-          await prefs.setString('user_profile', jsonEncode(userData));
+          print('SafeApiService: Реальный токен сохранен: ${accessToken.substring(0, 20)}...');
           
-          print('SafeApiService: Данные пользователя сохранены - роль: $userRole');
+          // Получаем данные пользователя
+          print('SafeApiService: Получаем данные пользователя...');
+          final userResult = await safeRequest('/v1/users/me/', 
+            headers: {
+              'Authorization': 'Bearer $accessToken',
+            },
+          );
+          
+          print('SafeApiService: Результат получения данных пользователя: ${userResult['success']}');
+          print('SafeApiService: Статус код пользователя: ${userResult['statusCode']}');
+          
+          if (userResult['success'] && userResult['data'] != null) {
+            final userData = userResult['data'];
+            await prefs.setString('user_profile', jsonEncode(userData));
+            await prefs.setString('user_role', userData['role'] ?? '');
+            await prefs.setInt('user_id', userData['id'] ?? 0);
+            
+            print('SafeApiService: Данные пользователя сохранены - роль: ${userData['role']}');
+            print('SafeApiService: ID пользователя: ${userData['id']}');
+            print('SafeApiService: Имя пользователя: ${userData['first_name']} ${userData['last_name']}');
+            print('SafeApiService: Фото пользователя: ${userData['photo']}');
             
             return {
               'success': true,
-              'data': {
-              'token': token,
-              'user': userData,
-              }
+              'data': userData,
             };
           } else {
-          print('SafeApiService: Ошибка получения данных пользователя: ${userResult['error']}');
-          // Возвращаем данные без профиля пользователя
-                return {
-                  'success': true,
-                  'data': {
-              'token': token,
-              'user': {'username': username, 'role': 'DRIVER'},
-                  }
-                };
-              }
+            print('SafeApiService: Ошибка получения данных пользователя: ${userResult['error']}');
+            return {
+              'success': false,
+              'error': 'Ошибка получения данных пользователя',
+            };
+          }
+        } else {
+          print('SafeApiService: Токен не найден в ответе');
+          return {
+            'success': false,
+            'error': 'Токен авторизации не найден',
+          };
+        }
       } else {
         print('SafeApiService: Ошибка авторизации через API: ${result['error']}');
-        
-        // Определяем конкретную ошибку
-        String errorMessage = 'Неверный логин или пароль';
-        if (result['error'] != null) {
-          if (result['error'].toString().contains('401') || result['error'].toString().contains('Unauthorized')) {
-            errorMessage = 'Неверный логин или пароль';
-          } else if (result['error'].toString().contains('400') || result['error'].toString().contains('Bad Request')) {
-            errorMessage = 'Неверный формат данных';
-          } else if (result['error'].toString().contains('500') || result['error'].toString().contains('Internal Server Error')) {
-            errorMessage = 'Ошибка сервера, попробуйте позже';
-          } else if (result['error'].toString().contains('timeout') || result['error'].toString().contains('Connection')) {
-            errorMessage = 'Нет подключения к серверу';
-          }
-      }
-      
         return {
           'success': false,
-          'error': errorMessage,
+          'error': 'Неверный логин или пароль',
         };
       }
     } catch (e) {
@@ -186,13 +187,33 @@ class SafeApiService {
     }
   }
   
-  // Получение данных с fallback
-  static Future<Map<String, dynamic>> getDataWithFallback(
-    String endpoint,
-    List<Map<String, dynamic>> fallbackData,
-  ) async {
+  // Безопасная загрузка данных с fallback
+  static Future<Map<String, dynamic>> safeLoadData(
+    String endpoint, {
+    Map<String, dynamic>? fallbackData,
+    String? authToken,
+  }) async {
     try {
-      final result = await safeRequest(endpoint);
+      // Проверяем доступность сервера
+      final isAvailable = await isServerAvailable();
+      
+      if (!isAvailable) {
+        print('SafeApiService: Сервер недоступен, используем fallback данные');
+        return {
+          'success': true,
+          'data': fallbackData,
+          'source': 'fallback',
+          'warning': 'Сервер недоступен, используются тестовые данные',
+        };
+      }
+      
+      // Загружаем данные с сервера
+      final headers = <String, String>{};
+      if (authToken != null) {
+        headers['Authorization'] = 'Bearer $authToken';
+      }
+      
+      final result = await safeRequest(endpoint, headers: headers);
       
       if (result['success']) {
         return {
@@ -201,14 +222,16 @@ class SafeApiService {
           'source': 'server',
         };
       } else {
+        print('SafeApiService: Ошибка загрузки данных: ${result['error']}');
         return {
           'success': true,
           'data': fallbackData,
           'source': 'fallback',
-          'warning': 'Используются тестовые данные',
+          'warning': 'Сервер недоступен, используются тестовые данные',
         };
       }
     } catch (e) {
+      print('SafeApiService: Ошибка загрузки данных: $e');
       return {
         'success': true,
         'data': fallbackData,
@@ -311,4 +334,126 @@ class SafeApiService {
       };
     }
   }
-} 
+
+  // Обновление токена авторизации
+  static Future<Map<String, dynamic>> refreshAuthToken() async {
+    try {
+      print('SafeApiService: Попытка обновления токена...');
+      
+      final prefs = await SharedPreferences.getInstance();
+      final refreshToken = prefs.getString('refresh_token');
+      
+      if (refreshToken == null) {
+        print('SafeApiService: Refresh токен не найден');
+        return {
+          'success': false,
+          'error': 'Refresh токен не найден',
+        };
+      }
+
+      final result = await safeRequest('/v1/auth/token/refresh/', 
+        method: 'POST',
+        body: {
+          'refresh': refreshToken,
+        },
+      );
+
+      if (result['success'] && result['data'] != null) {
+        final tokenData = result['data'];
+        final newAccessToken = tokenData['access'];
+        
+        if (newAccessToken != null) {
+          // Сохраняем новый токен
+          await prefs.setString('auth_token', newAccessToken);
+          
+          print('SafeApiService: Токен успешно обновлен: ${newAccessToken.substring(0, 20)}...');
+          
+          return {
+            'success': true,
+            'data': {
+              'access_token': newAccessToken,
+            },
+          };
+        } else {
+          print('SafeApiService: Новый токен не найден в ответе');
+          return {
+            'success': false,
+            'error': 'Новый токен не найден',
+          };
+        }
+      } else {
+        print('SafeApiService: Ошибка обновления токена: ${result['error']}');
+        return {
+          'success': false,
+          'error': 'Ошибка обновления токена',
+        };
+      }
+    } catch (e) {
+      print('SafeApiService: Ошибка обновления токена: $e');
+      return {
+        'success': false,
+        'error': 'Ошибка сети: $e',
+      };
+    }
+  }
+
+  // Принудительное обновление токена
+  static Future<String?> forceRefreshToken() async {
+    try {
+      print('SafeApiService: Принудительное обновление токена...');
+      
+      final refreshResult = await refreshAuthToken();
+      if (refreshResult['success']) {
+        print('SafeApiService: Токен успешно обновлен принудительно');
+        return refreshResult['data']['access_token'];
+      } else {
+        print('SafeApiService: Не удалось обновить токен принудительно');
+        return null;
+      }
+    } catch (e) {
+      print('SafeApiService: Ошибка принудительного обновления токена: $e');
+      return null;
+    }
+  }
+
+  // Получение валидного токена (с автоматическим обновлением)
+  static Future<String?> getValidToken() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      String? token = prefs.getString('auth_token');
+      
+      if (token == null) {
+        print('SafeApiService: Токен не найден');
+        return null;
+      }
+
+      // Проверяем, не истек ли токен, пытаясь сделать тестовый запрос
+      final testResult = await safeRequest('/v1/users/me/', 
+        headers: {
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (testResult['success']) {
+        print('SafeApiService: Токен валиден');
+        return token;
+      } else if (testResult['statusCode'] == 401 || testResult['statusCode'] == 403) {
+        print('SafeApiService: Токен истек (${testResult['statusCode']}), пытаемся обновить...');
+        
+        final refreshResult = await refreshAuthToken();
+        if (refreshResult['success']) {
+          return refreshResult['data']['access_token'];
+        } else {
+          print('SafeApiService: Не удалось обновить токен');
+          return null;
+        }
+      } else {
+        print('SafeApiService: Ошибка проверки токена: ${testResult['error']}');
+        return token; // Возвращаем токен, даже если есть другие ошибки
+      }
+    } catch (e) {
+      print('SafeApiService: Ошибка получения валидного токена: $e');
+      return null;
+    }
+  }
+}
