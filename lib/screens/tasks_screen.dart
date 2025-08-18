@@ -742,65 +742,80 @@ class _TasksScreenState extends State<TasksScreen> {
 
   Future<void> _updateTaskStatus(int taskId, String newStatus) async {
     try {
-      final urls = [
-        '${AppConfig.baseApiUrl}/tasks/$taskId/',
-                  '${AppConfig.baseApiUrl}/tasks/$taskId/',
-        '${AppConfig.baseApiUrl}/api/tasks/$taskId/',
-      ];
+      // Получаем токен авторизации
+      final apiService = ApiService();
+      final token = await apiService.getToken();
       
-      for (final url in urls) {
-        try {
-          final response = await http.patch(
-            Uri.parse(url),
-            headers: {
-              'Accept': 'application/json',
-              'Content-Type': 'application/json',
-            },
-            body: json.encode({'status': newStatus}),
-          ).timeout(const Duration(seconds: 10));
-          
-          if (response.statusCode == 200) {
-            print('Статус задачи $taskId обновлен на $newStatus');
-            // Обновляем локальные данные
-            setState(() {
-              final taskIndex = allTasks.indexWhere((task) => task['id'] == taskId);
-              if (taskIndex != -1) {
-                allTasks[taskIndex]['status'] = newStatus;
-                filteredTasks = List.from(allTasks);
-                _updateTaskCounts();
-              }
-            });
-            return;
-          } else {
-            print('Ошибка обновления статуса для $url: ${response.statusCode}');
-          }
-        } catch (e) {
-          print('Ошибка для URL $url: $e');
-          continue;
-        }
+      if (token == null) {
+        print('Токен авторизации не найден');
+        return;
       }
       
-      // Если не удалось обновить на сервере, обновляем локально
-      print('Не удалось обновить на сервере, обновляем локально');
-      setState(() {
-        final taskIndex = allTasks.indexWhere((task) => task['id'] == taskId);
-        if (taskIndex != -1) {
-          allTasks[taskIndex]['status'] = newStatus;
-          filteredTasks = List.from(allTasks);
-          _updateTaskCounts();
-        }
-      });
+      // Правильный URL для обновления задачи
+      final url = '${AppConfig.baseApiUrl}/tasks/$taskId/';
+      
+      print('Обновляем статус задачи $taskId на $newStatus через $url');
+      
+      final response = await http.patch(
+        Uri.parse(url),
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: json.encode({'status': newStatus}),
+      ).timeout(const Duration(seconds: 10));
+      
+      print('Ответ сервера: ${response.statusCode} - ${response.body}');
+      
+      if (response.statusCode == 200) {
+        print('✅ Статус задачи $taskId успешно обновлен на $newStatus');
+        // Обновляем локальные данные
+        setState(() {
+          final taskIndex = allTasks.indexWhere((task) => task['id'] == taskId);
+          if (taskIndex != -1) {
+            allTasks[taskIndex]['status'] = newStatus;
+            filteredTasks = List.from(allTasks);
+            _updateTaskCounts();
+          }
+        });
+        
+        // Показываем уведомление об успехе
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Статус задачи обновлен на ${_getStatusDisplay(newStatus)}'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      } else if (response.statusCode == 403) {
+        print('❌ Ошибка 403: Нет прав на обновление задачи');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Нет прав на обновление задачи'),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      } else {
+        print('❌ Ошибка обновления статуса: ${response.statusCode} - ${response.body}');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Ошибка обновления: ${response.statusCode}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
     } catch (e) {
-      print('Ошибка обновления статуса задачи: $e');
-      // Обновляем локально в случае ошибки
-      setState(() {
-        final taskIndex = allTasks.indexWhere((task) => task['id'] == taskId);
-        if (taskIndex != -1) {
-          allTasks[taskIndex]['status'] = newStatus;
-          filteredTasks = List.from(allTasks);
-          _updateTaskCounts();
-        }
-      });
+      print('❌ Ошибка обновления статуса задачи: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Ошибка сети: $e'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+        ),
+      );
     }
   }
 
@@ -818,6 +833,21 @@ class _TasksScreenState extends State<TasksScreen> {
   String _getFirstLetter(String? name) {
     if (name == null || name.isEmpty) return 'U';
     return name[0].toUpperCase();
+  }
+
+  String _getStatusDisplay(String status) {
+    switch (status) {
+      case 'NEW':
+        return 'Новая';
+      case 'IN_PROGRESS':
+        return 'В работе';
+      case 'COMPLETED':
+        return 'Завершена';
+      case 'CANCELLED':
+        return 'Отменена';
+      default:
+        return status;
+    }
   }
 
   bool _canCreateTasks() {
